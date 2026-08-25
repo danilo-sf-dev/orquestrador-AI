@@ -1,0 +1,7 @@
+{
+  "jira": {
+    "baseUrl": "https://SEU-DOMINIO.atlassian.net",
+    "email": "SEU_EMAIL_AQUI",
+    "apiToken": "SEU_TOKEN_AQUI"
+  }
+}
