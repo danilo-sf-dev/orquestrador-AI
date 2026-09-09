@@ -56,11 +56,21 @@ Use quando:
 - o usuário pedir para preparar stage, mensagem ou validar o que será commitado;
 - uma mudança cross-repo precisar de commits coordenados.
 
-Não executar `git commit` silenciosamente. Antes do primeiro commit existe uma
-**aprovação explícita do plano de commits**. Após essa aprovação, a sequência pode
-ser executada sem pedir confirmação a cada commit, desde que o agrupamento, arquivos,
-mensagens, ordem e escopo não mudem. Qualquer mudança material exige novo plano e
-nova aprovação.
+Não executar `git commit` silenciosamente. Ao solicitar commit, o usuário deve escolher
+explicitamente um modo de execução: **AUTOMÁTICO**, **MANUAL** ou **OUTROS**.
+
+- `AUTOMÁTICO`: a própria escolha autoriza a skill a analisar, fasear, stagear, validar e
+  executar todos os commits do plano sem nova confirmação humana entre os grupos. O
+  faseamento semântico continua obrigatório e somente a mensagem em inglês pode ser
+  gravada no repositório. Ao final, apresentar resumo completo do que foi commitado.
+- `MANUAL`: a skill analisa e apresenta o plano faseado completo antes de qualquer
+  mutação Git. Depois do plano, deve sempre oferecer `POSSO COMITAR`, `PRECISA AJUSTAR`
+  e `OUTROS`. Somente `POSSO COMITAR` autoriza executar exatamente o plano apresentado.
+- `OUTROS`: o usuário descreve como deseja prosseguir. Nunca interpretar `OUTROS` como
+  autorização implícita para commitar.
+
+Qualquer mudança material no agrupamento, arquivos, mensagens, ordem ou escopo após um
+plano congelado/autorizado invalida a autorização anterior e exige novo plano/decisão do usuário.
 
 ## Pré-flight obrigatório
 
@@ -146,30 +156,57 @@ Separar em commits distintos quando houver intenções independentes, por exempl
 
 ### Commit Plan obrigatório
 
-Antes de stagear, apresentar um plano como:
+Todo modo usa o mesmo motor de análise e deve construir um `COMMIT PLAN` faseado antes
+de qualquer `git commit`. No modo `MANUAL`, o plano deve ser apresentado ao usuário
+antes de qualquer mutação Git. No modo `AUTOMÁTICO`, o plano pode ser congelado
+internamente e executado sem uma segunda aprovação, mas deve aparecer integralmente no
+resumo final junto com o resultado real.
+
+Formato mínimo:
 
 ```text
 COMMIT PLAN — <JIRA>
 
-Commit 1
+────────────────────────────────
+COMMIT 1
+────────────────────────────────
+Tipo: feat
 Intenção: <por que este grupo existe>
-Mensagem: feat(...): ...
+
 Arquivos:
 - A
 - B
 - C
 
-Commit 2
+PT-BR:
+feat(...): <descrição em português>
+
+EN — COPY:
+feat(...): <description in English>
+
+────────────────────────────────
+COMMIT 2
+────────────────────────────────
+Tipo: chore
 Intenção: <outra mudança independente>
-Mensagem: refactor(...): ...
+
 Arquivos:
 - X
 - Y
+
+PT-BR:
+chore(...): <descrição em português>
+
+EN — COPY:
+chore(...): <description in English>
 
 Ordem: 1 -> 2
 Arquivos excluídos/não relacionados:
 - ...
 ```
+
+`MESSAGE_PTBR` existe para entendimento/revisão do usuário. `MESSAGE_EN` é a versão
+executável e é a **única** mensagem permitida em `git commit` realizado pela skill.
 
 Para cada grupo, validar:
 
@@ -180,49 +217,113 @@ REVERTABLE_UNIT=true
 UNRELATED_CHANGES=false
 ```
 
-Se algum critério não puder ser sustentado, reorganizar o grupo antes de pedir aprovação.
+Se algum critério não puder ser sustentado, reorganizar o grupo antes de congelar/apresentar o plano.
 
-### Aprovação do plano
+### Autorização e execução do plano
 
-Pedir uma única aprovação explícita do `COMMIT PLAN`.
+#### Modo `AUTOMÁTICO`
 
-Após aprovado:
+A escolha explícita de `AUTOMÁTICO` autoriza a execução do plano faseado após as
+validações obrigatórias. Não pedir uma segunda aprovação do plano nem confirmação entre
+commits, desde que o plano não mude.
+
+Para cada grupo:
 
 1. stagear somente os arquivos do grupo atual;
 2. revisar `git diff --staged`;
 3. repetir a proteção obrigatória de `.ai/`;
 4. validar secrets/arquivos proibidos;
-5. confirmar que o staged corresponde exatamente ao grupo aprovado;
-6. executar o commit;
-7. limpar/validar o stage;
-8. avançar para o próximo grupo.
+5. confirmar que o staged corresponde exatamente ao grupo planejado;
+6. executar `git commit` usando **somente `MESSAGE_EN`**;
+7. registrar o SHA real;
+8. limpar/validar o stage;
+9. avançar para o próximo grupo.
 
-Não pedir confirmação humana novamente entre os commits aprovados.
+Ao final, apresentar `COMMIT RESULT` com cada grupo, intenção, arquivos,
+`MESSAGE_PTBR`, `MESSAGE_EN — COMMITTED` e SHA.
 
-**Parar e pedir nova aprovação** se, durante a execução:
+#### Modo `MANUAL`
+
+Depois de apresentar o plano final, **parar** e sempre oferecer:
+
+```text
+1. POSSO COMITAR
+   Executa exatamente o plano apresentado.
+
+2. PRECISA AJUSTAR
+   Mantém a execução bloqueada e recebe as alterações solicitadas pelo usuário.
+
+3. OUTROS
+   O usuário informa como deseja prosseguir, inclusive não commitar agora.
+```
+
+Regras:
+
+- `POSSO COMITAR`: congelar o plano como `APPROVED` e executar os grupos exatamente
+  como apresentados, usando somente `MESSAGE_EN` no Git;
+- `PRECISA AJUSTAR`: não executar nenhuma mutação Git; aplicar a solicitação, gerar
+  novo plano e reapresentar as três opções;
+- `OUTROS`: interpretar literalmente a instrução. Exemplos válidos: adiar o commit,
+  usuário executar externamente, commitar apenas parte do plano ou encerrar a etapa.
+  Se houver qualquer mutação Git pedida de forma ambígua, pedir confirmação específica;
+- `não vou commitar agora`/equivalente: registrar `COMMIT_STATUS=DEFERRED` e não alterar
+  stage/repositório;
+- `vou commitar manualmente`/equivalente: registrar `COMMIT_STATUS=EXTERNAL` e não
+  alterar stage/repositório.
+
+#### Mudança material durante execução
+
+Em qualquer modo, **parar** se:
 
 - um arquivo mudar de grupo;
 - surgir arquivo novo relevante;
 - a mensagem precisar mudar materialmente;
 - a ordem dos commits mudar;
 - um commit precisar ser dividido ou fundido;
-- o diff atual divergir do plano aprovado;
+- o diff atual divergir do plano congelado;
 - qualquer gate/integridade deixar de ser válido.
 
-## Passo 1 — Escolha do fluxo
+No `AUTOMÁTICO`, a autorização automática termina nesse ponto e o usuário deve decidir
+como prosseguir. No `MANUAL`, gerar novo plano e voltar para `POSSO COMITAR`,
+`PRECISA AJUSTAR` ou `OUTROS`.
 
-Se o usuário ainda não especificou o tipo de commit, perguntar com estas quatro opções:
+## Passo 1 — Escolha do modo de execução
+
+Ao usuário solicitar commit e ainda não existir `COMMIT_MODE` definido para a etapa,
+apresentar **sempre**:
 
 | Opção | Comportamento |
 |---|---|
-| **Commit seguro da feature** | Verifica gates, RED lock, escopo julgado, validações necessárias, stage intencional e commit. Não executa formatter que altere código depois do Judge. |
-| **Revalidar e commit** | Permite formatter/auto-fix detectado; se qualquer arquivo julgado mudar, invalida GREEN/Judge e exige revalidação antes do commit. |
-| **Commit parcial** | Commit de escopo explícito, por exemplo código+testes, QA/docs/memória ou apenas um repo. Mantém os gates aplicáveis ao escopo. |
-| **Outros** | Usuário descreve fluxo personalizado; listar passos/pulos e pedir confirmação antes de executar. |
+| **AUTOMÁTICO** | Analisa o diff, cria o plano semântico faseado, stageia/valida grupo por grupo, executa todos os commits automaticamente em inglês e entrega o resumo final com SHAs. |
+| **MANUAL** | Analisa o diff e apresenta o plano faseado PT-BR + EN. Depois pergunta `POSSO COMITAR`, `PRECISA AJUSTAR` ou `OUTROS`. |
+| **OUTROS** | O usuário descreve o comportamento desejado. Pode inclusive não commitar agora. Nunca implica autorização automática. |
 
 Pergunta sugerida:
 
-> Qual fluxo de commit deseja executar: Commit seguro da feature, Revalidar e commit, Commit parcial ou Outros?
+> Como deseja trabalhar com os commits: **AUTOMÁTICO**, **MANUAL** ou **OUTROS**?
+
+Persistir a escolha:
+
+```text
+COMMIT_MODE=AUTO | MANUAL | OTHER
+```
+
+A escolha de modo controla **quem autoriza a execução**, mas não muda a regra de
+faseamento: em `AUTO` e `MANUAL`, o agrupamento continua sendo semântico e obrigatório.
+
+## Passo 2 — Política técnica do commit
+
+A política técnica é ortogonal ao modo de execução. Se o usuário não pedir uma variação
+específica e o contexto indicar entrega final normal da feature, usar **Commit seguro da
+feature**. Só perguntar por política técnica quando houver ambiguidade real ou quando o
+usuário pedir revalidação, commit parcial/WIP ou comportamento personalizado.
+
+| Política | Comportamento |
+|---|---|
+| **Commit seguro da feature** | Verifica gates, RED lock, escopo julgado e validações não mutantes antes de stage/commit. |
+| **Revalidar e commit** | Permite formatter/auto-fix detectado; qualquer mudança em escopo julgado invalida GREEN/Judge e exige revalidação. |
+| **Commit parcial** | Trabalha apenas no escopo explícito (arquivos, artefatos ou repo), preservando os gates aplicáveis. |
+| **Outros** | Usuário define política técnica personalizada; listar passos/pulos e riscos antes de executar. |
 
 ### Commit seguro da feature
 
@@ -234,10 +335,10 @@ Pergunta sugerida:
 6. verificar QA quando se tratar de commit final completo da feature;
 7. rodar apenas validações não mutantes que sejam exigidas e estejam detectadas;
 8. revisar `git status`, `git diff`, staged e arquivos não relacionados;
-9. stagear somente arquivos pretendidos;
-10. preparar mensagem de commit conforme convenção detectada;
-11. mostrar plano final e pedir confirmação;
-12. executar o commit somente após confirmação.
+9. preparar o `COMMIT PLAN` faseado com `MESSAGE_PTBR` + `MESSAGE_EN`;
+10. seguir o modo escolhido: `AUTO` executa após as validações; `MANUAL` apresenta o
+    plano e aguarda `POSSO COMITAR`, `PRECISA AJUSTAR` ou `OUTROS`; `OTHER` segue a
+    instrução explícita do usuário sem presumir autorização.
 
 ### Revalidar e commit
 
@@ -353,8 +454,21 @@ Tipos permitidos por fallback:
 
 `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `chore`, `ci`
 
-A descrição é em português por padrão e deve explicar a intenção.
-Não usar mensagens vagas como `update`, `fix`, `changes` ou `WIP`.
+Para cada grupo, gerar obrigatoriamente duas mensagens semanticamente equivalentes:
+
+```text
+MESSAGE_PTBR=<mensagem para entendimento/revisão do usuário>
+MESSAGE_EN=<mensagem final executável>
+```
+
+Regras:
+
+- `MESSAGE_PTBR` deve explicar a intenção em português;
+- `MESSAGE_EN` deve explicar a mesma intenção em inglês natural e técnico;
+- o `type` e o `scope` seguem a convenção do projeto e não precisam ser traduzidos;
+- **todo `git commit` executado pela skill usa exclusivamente `MESSAGE_EN`**;
+- nunca commitar a versão PT-BR por engano;
+- não usar mensagens vagas como `update`, `fix`, `changes` ou `WIP`.
 
 Jira ID:
 
@@ -364,19 +478,31 @@ Jira ID:
 Exemplos de fallback:
 
 ```text
+PT-BR:
 feat(orcamento): adicionar validação da API única
+
+EN — COPY/COMMIT:
+feat(orcamento): add API única validation
 
 Refs: JIRA-1234
 ```
 
 ```text
+PT-BR:
 fix(calculo): evitar duplicidade no processamento da proposta
+
+EN — COPY/COMMIT:
+fix(calculo): prevent duplicate proposal processing
 
 Refs: JIRA-5678
 ```
 
 ```text
+PT-BR:
 test(orcamento): adicionar casos de borda do cálculo
+
+EN — COPY/COMMIT:
+test(orcamento): add calculation edge cases
 
 Refs: JIRA-1234
 ```
@@ -397,7 +523,7 @@ Princípios:
 - cada commit deve ser revisável e reversível como unidade razoável;
 - quando todas as mudanças possuem uma única intenção, um único commit é válido e preferível;
 - não fazer `git add .` cegamente em workspace sujo;
-- revisar `git diff --staged` antes **de cada commit** da sequência aprovada;
+- revisar `git diff --staged` antes **de cada commit** da sequência congelada/autorizada;
 - repetir a proteção de `.ai/` imediatamente antes **de cada `git commit`**.
 
 A ordem deve respeitar dependências entre unidades lógicas e, sempre que razoável,
@@ -414,9 +540,10 @@ Antes de qualquer commit:
 1. validar todos os repositórios afetados no fluxo **Commit seguro da feature**;
 2. confirmar contrato entre repos;
 3. confirmar compatibilidade e ordem indicada em `DEPLOY_ORDER`, quando houver;
-4. mostrar a ordem proposta de commits;
-5. mostrar arquivos e mensagem de cada repo;
-6. pedir confirmação.
+4. incorporar a ordem proposta, arquivos e mensagens de cada repo no `COMMIT PLAN`;
+5. no `MANUAL`, apresentar o plano cross-repo antes de qualquer mutação;
+6. no `AUTO`, executar a ordem congelada após as validações sem confirmação adicional;
+7. em `OTHER`, seguir apenas a instrução explícita do usuário.
 
 Não tentar criar “um commit Git” atravessando repositórios.
 Usar o mesmo Jira ID para rastreabilidade, respeitando o padrão de cada repo.
@@ -451,7 +578,8 @@ Essa proteção é obrigatória mesmo que a feature já exista ou tenha sido ret
 
 ## Segurança
 
-Antes da confirmação final, mostrar/verificar:
+Antes de qualquer execução Git mutante, mostrar/verificar no `MANUAL` e verificar
+internamente no `AUTO`:
 
 - repo e branch;
 - Jira da feature;
@@ -467,7 +595,9 @@ Antes da confirmação final, mostrar/verificar:
 - política da memória `.ai/`;
 - em multi-repo, ordem e commits de todos os repos.
 
-Nunca stagear automaticamente, salvo se a política do projeto disser o contrário:
+Nunca incluir automaticamente no stage os itens abaixo. Convenção explícita do projeto
+pode justificar exceção apenas para itens não sensíveis; `.ai/`, credenciais e secrets
+continuam proibidos:
 
 - `.env*` com credenciais;
 - tokens/chaves/certificados privados;
@@ -497,6 +627,7 @@ Registrar apenas fatos:
 ```text
 JIRA:
 FLOW:
+COMMIT_MODE: AUTO | MANUAL | OTHER
 MEMORY_POLICY:
 
 REPO:
@@ -506,12 +637,15 @@ GATES:
 VALIDATIONS:
 RED_LOCK_STATUS:
 JUDGEMENT_SCOPE_HASH_STATUS:
-COMMIT_PLAN_STATUS:
+COMMIT_PLAN_STATUS: PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
 COMMIT_GROUPS:
   - ORDER:
+    TYPE:
     INTENT:
     FILES:
-    MESSAGE:
+    MESSAGE_PTBR:
+    MESSAGE_EN:
+    EXECUTION_STATUS: PLANNED | COMMITTED | NOT_EXECUTED
     SHA:
 EXCLUDED_FILES:
 SKIPPED_VALIDATIONS:
@@ -523,9 +657,17 @@ por repositório. Nunca inventar `SHA`: escrever somente após o commit existir.
 
 ## Atualização de estado
 
-Após sucesso:
+Ao entrar na etapa:
 
 ```text
+COMMIT_MODE=AUTO | MANUAL | OTHER
+COMMIT_PLAN_STATUS=PENDING | PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
+```
+
+Após execução bem-sucedida pela skill:
+
+```text
+COMMIT_PLAN_STATUS=EXECUTED
 COMMIT_STATUS=COMMITTED
 COMMIT_COUNT=<n>
 COMMIT_SHAS=<sha1,sha2,...>
@@ -534,31 +676,75 @@ COMMIT_SHAS=<sha1,sha2,...>
 Se houver um único commit, `COMMIT_COUNT=1`. Em multi-repo, registrar a sequência de
 SHAs por repositório.
 
-Se o commit for delegado externamente:
+Se o usuário decidir não commitar agora:
 
 ```text
+COMMIT_PLAN_STATUS=DEFERRED
+COMMIT_STATUS=DEFERRED
+```
+
+`DEFERRED` preserva o plano, mas **não satisfaz** a pré-condição de arquivamento.
+
+Se o commit for delegado ao usuário/fluxo externo:
+
+```text
+COMMIT_PLAN_STATUS=EXTERNAL
 COMMIT_STATUS=EXTERNAL
 ```
 
-Se usuário dispensar explicitamente:
+Se usuário dispensar explicitamente o commit:
 
 ```text
+COMMIT_PLAN_STATUS=SKIPPED
 COMMIT_STATUS=SKIPPED_BY_USER
 ```
 
 ## Resultado ao usuário
 
-Informar de forma compacta:
+### Quando ainda não houve execução (`MANUAL`)
 
-- fluxo escolhido;
+Mostrar o `COMMIT PLAN` completo e terminar sempre com:
+
+```text
+Como deseja continuar?
+1. POSSO COMITAR
+2. PRECISA AJUSTAR
+3. OUTROS
+```
+
+### Após execução (`AUTO` ou `MANUAL` autorizado)
+
+Mostrar `COMMIT RESULT — <JIRA>` com um bloco por commit efetivamente criado:
+
+```text
+────────────────────────────────
+COMMIT <N> — COMMITTED
+────────────────────────────────
+Tipo: <type>
+Intenção: <razão do agrupamento>
+
+Arquivos:
+- ...
+
+PT-BR:
+<MESSAGE_PTBR>
+
+EN — COMMITTED:
+<MESSAGE_EN>
+
+SHA:
+<sha real>
+```
+
+Além disso, informar de forma compacta:
+
+- modo e política técnica escolhidos;
 - repos/branches;
 - ferramentas e convenções detectadas;
 - gates e validações executados;
 - status do RED lock e do julgamento;
 - arquivos incluídos/excluídos;
-- plano de commits aprovado e critério de agrupamento;
-- mensagem(ns) de commit;
-- SHA(s), se criados;
+- critério de agrupamento semântico;
 - política aplicada à memória `.ai/`;
 - validações puladas e motivo;
 - pendência que impeça arquivamento.

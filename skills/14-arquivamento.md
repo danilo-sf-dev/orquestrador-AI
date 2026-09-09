@@ -52,7 +52,7 @@ Transformar a entrega em memória reutilizável para futuras histórias/bugs.
 - QA resolvido conforme o fluxo:
   - `STANDARD_GATED`: QA aprovado;
   - `QUICK_AUTOGO`: QA aprovado **ou** `QA_NOT_REQUIRED_WITH_REASON`;
-- commit concluído, delegado externamente ou dispensado explicitamente conforme política;
+- commit concluído, delegado externamente ou dispensado explicitamente conforme política; `COMMIT_STATUS=DEFERRED` não satisfaz esta pré-condição e mantém o arquivamento bloqueado;
 - PR resolvido como `OPENED`, `EXTERNAL`, `NOT_REQUESTED` ou `SKIPPED_BY_USER`;
 - usuário autorizou `ARQUIVAR`.
 

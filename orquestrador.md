@@ -29,7 +29,7 @@ Não duplicar no orquestrador regras detalhadas de Jira, Discovery, RED, impleme
 6. RED aprovado fica protegido por `red-tests.lock`.
 7. Judge deve ser fresh-context/read-only e não pode editar implementação.
 8. Mudança em escopo já julgado invalida o julgamento e exige GREEN + novo Judge.
-9. Commit exige confirmação explícita.
+9. Commit exige escolha explícita de modo: `AUTOMÁTICO`, `MANUAL` ou `OUTROS`. `AUTOMÁTICO` autoriza a execução faseada conforme a skill 12; `MANUAL` exige `POSSO COMITAR` após o plano; `OUTROS` nunca implica autorização de commit.
 10. PR só ocorre por solicitação explícita.
 11. Operações Git destrutivas, merge, rebase ou force push não são automáticos.
 12. Credenciais Jira nunca entram em memória, logs, commit ou PR.
@@ -216,7 +216,7 @@ JIRA_ACCESS            [ECONOMICAL]
    -> FAIL + DISCOVERY_GAP|RED_CONTRACT_DEFECT|REQUIREMENT_AMBIGUITY: handoff para HEAD_STRONG -> JUDGE_RECOVERY
 -> MODEL_HANDOFF_REQUIRED para EXECUTOR quando QA for a próxima fase
 -> QA_REVIEW           [EXECUTOR] [APROVAR QA]
--> COMMIT_REVIEW       [EXECUTOR] [CONFIRMAR COMMIT]
+-> COMMIT_REVIEW       [EXECUTOR] [ESCOLHER: AUTOMÁTICO | MANUAL | OUTROS]
 -> PR_DESCRIPTION      [EXECUTOR] somente se solicitado; gera conteúdo para input manual, sem acesso remoto
 -> MODEL_HANDOFF_REQUIRED para ECONOMICAL quando archive for executado
 -> READY_TO_ARCHIVE    [ECONOMICAL]
@@ -380,6 +380,8 @@ JUDGE_STATUS:
 JUDGE_FAIL_CLASS:
 RECOVERY_STATUS:
 QA_STATUS:
+COMMIT_MODE: # AUTO | MANUAL | OTHER
+COMMIT_PLAN_STATUS:
 COMMIT_STATUS:
 PR_STATUS: # NOT_REQUESTED | DESCRIPTION_READY | SKIPPED_BY_USER
 PENDING:

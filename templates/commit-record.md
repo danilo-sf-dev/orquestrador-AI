@@ -1,8 +1,9 @@
 # Commit — <JIRA-ID>
 
 ## Configuração
-- Flow:
-- Memory policy: ask | include | local_only
+- Execution mode: AUTO | MANUAL | OTHER
+- Technical flow: safe_feature | revalidate | partial | other
+- Memory policy: local_only
 - Commit policy: ask | required | external
 
 ## Repositório
@@ -20,16 +21,21 @@
 ## Validações executadas
 - 
 
-## Stage
-### Incluídos
-- 
+## Commit plan
+- Status: PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
 
-### Excluídos intencionalmente
-- 
-
-## Commit
-- Message:
+### Commit 1
+- Type:
+- Intent:
+- Files:
+  - 
+- PT-BR:
+- EN:
+- Execution status: PLANNED | COMMITTED | NOT_EXECUTED
 - SHA:
+
+## Arquivos excluídos intencionalmente
+- 
 
 ## Validações puladas
 - 
