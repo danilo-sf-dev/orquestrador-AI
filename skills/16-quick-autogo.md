@@ -329,7 +329,7 @@ Depois do QA:
 -> COMMIT_REVIEW
 ```
 
-Commit exige confirmação explícita.
+Commit segue `skills/12-commit-workflow.md`: ao entrar em `COMMIT_REVIEW`, oferecer `AUTOMÁTICO`, `MANUAL` e `OUTROS`. `AUTOMÁTICO` autoriza a execução faseada; `MANUAL` apresenta o plano e aguarda `POSSO COMITAR`, `PRECISA AJUSTAR` ou `OUTROS`.
 
 PR continua on-demand; `PR_STATUS=NOT_REQUESTED` é válido.
 

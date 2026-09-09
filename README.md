@@ -266,7 +266,7 @@ QA permanece como na esteira anterior:
 
 ## Commit e PR
 
-- `skills/12-commit-workflow.md`: commit é empacotamento/rastreabilidade; preserva RED/GREEN/Judge e exige confirmação final. Registro novo: `delivery/commit.md`.
+- `skills/12-commit-workflow.md`: commit é empacotamento/rastreabilidade; preserva RED/GREEN/Judge, sempre faseia por intenção e oferece `AUTOMÁTICO`, `MANUAL` e `OUTROS`. AUTO executa grupos usando mensagem EN; MANUAL apresenta PT-BR + EN e aguarda aprovação/ajuste/outros. Registro: `delivery/commit.md`.
 - `skills/13-pull-request-workflow.md`: `ABRIR PR` significa somente gerar título + descrição final para preenchimento manual. A skill não acessa provider remoto, não faz push e não cria PR/MR. Registro: `delivery/pull-request.md`.
 
 Essas skills são lazy-loaded; o tamanho delas não entra no contexto normal da implementação.
