@@ -58,6 +58,20 @@ Antes de modificar código, validar elegibilidade.
 
 ---
 
+
+## 2.1 Papel/modelo no QUICK
+
+`JIRA_ACCESS` pode ser executado por `ECONOMICAL`, mas o Quick Contract e toda a sequência `AUTO-GO -> RED -> implementação -> GREEN` exigem `EXECUTOR`.
+
+Em `ROUTING_MODE=manual`, antes do Quick Contract:
+
+```text
+MODEL_HANDOFF_REQUIRED=true
+NEXT_MODEL_ROLE=EXECUTOR
+```
+
+Mostrar PHASE BANNER e parar até o usuário trocar o modelo e confirmar. Não iniciar Quick Contract com `ECONOMICAL`.
+
 ## 3. Elegibilidade
 
 QUICK é adequado quando a alteração é:
@@ -248,18 +262,39 @@ Executar `skills/10-juiz.md`.
 
 ## 10. Judge FAIL
 
-Se `FAIL`:
-- voltar ao executor;
-- corrigir implementação;
-- executar GREEN novamente;
-- gerar novo handoff;
-- rodar novo Judge fresh.
+Usar obrigatoriamente a classificação produzida por `skills/10-juiz.md`:
 
-Se a correção exigir mudar requisito, Quick Contract ou RED:
+```text
+IMPLEMENTATION_DEFECT
+RED_CONTRACT_DEFECT
+DISCOVERY_GAP
+REQUIREMENT_AMBIGUITY
+```
+
+### `IMPLEMENTATION_DEFECT`
+
+O QUICK pode continuar:
+
+```text
+REWORK_IMPLEMENTATION [EXECUTOR]
+-> GREEN_VALIDATION
+-> JUDGING fresh
+```
+
+RED e lock permanecem intocáveis.
+
+### Demais classes
+
+Se `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`:
 
 ```text
 QUICK_AUTOGO_ABORTED
+RECOMMENDED_FLOW=STANDARD_GATED
+NEXT_STATE=JUDGE_RECOVERY
+NEXT_MODEL_ROLE=HEAD_STRONG
 ```
+
+Não improvisar reabertura de RED dentro do QUICK. O finding passa para `skills/17-judge-recovery.md`, com investigação direcionada e novo gate somente se `REOPEN RED` for realmente necessário.
 
 ---
 

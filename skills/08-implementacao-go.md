@@ -23,13 +23,26 @@ forbidden_writes:
   - acceptance_criteria
 ---
 
-# Skill — Implementação GO
+# Skill — Implementação GO / Rework
 
-## Pré-condições
+## Estados suportados
+
+```text
+IMPLEMENTING
+REWORK_IMPLEMENTATION
+```
+
+### Pré-condições de `IMPLEMENTING`
 - solução aprovada;
 - PRD/plano aprovados;
 - RED aprovado e selado;
 - usuário disse `GO` ou equivalente.
+
+### Pré-condições de `REWORK_IMPLEMENTATION`
+- `JUDGE_STATUS=FAIL`;
+- `JUDGE_FAIL_CLASS=IMPLEMENTATION_DEFECT`, ou recovery concluiu `DECISION=IMPLEMENTATION_ONLY`;
+- RED/lock continuam válidos;
+- handoff contém findings objetivos do Judge/recovery.
 
 ## Objetivo
 Implementar o mínimo necessário para satisfazer o plano e levar os testes selados a GREEN.
@@ -42,7 +55,8 @@ Implementar o mínimo necessário para satisfazer o plano e levar os testes sela
 5. Em cross-repo, preservar contrato e ordem de deploy definida.
 6. Registrar decisões emergentes em `STATE.md`.
 7. Se surgir decisão arquitetural nova que muda o plano, parar e escalar ao `HEAD_STRONG`.
-8. Se um teste RED estiver incorreto, parar e pedir `REOPEN RED`.
+8. Se suspeitar que um teste RED está incorreto, **não pedir nem executar `REOPEN RED` diretamente**. Parar e rotear para `JUDGE_RECOVERY [HEAD_STRONG]`; somente esse recovery pode justificar a reabertura e pedir a autorização humana explícita `REOPEN RED`.
+9. Em `REWORK_IMPLEMENTATION`, ler apenas o finding/delta necessário; não reinvestigar a história inteira nem reabrir artefatos aprovados sem necessidade.
 
 ## `06-implementation-summary.md`
 Guardar somente:
@@ -54,3 +68,15 @@ Guardar somente:
 - riscos.
 
 Não guardar transcript detalhado de tentativas, greps ou erros já resolvidos.
+
+
+## Saída de rework
+
+Após corrigir `REWORK_IMPLEMENTATION`:
+
+```text
+CURRENT_STATE=GREEN_VALIDATION
+NEXT_ACTION=REVALIDATE_GREEN
+```
+
+Nunca retornar automaticamente a `RED_REVIEW` ou `RED_EXECUTION`.

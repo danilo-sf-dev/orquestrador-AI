@@ -49,7 +49,9 @@ Transformar a entrega em memória reutilizável para futuras histórias/bugs.
 
 ## Pré-condições
 - Judge aprovado;
-- QA aprovado;
+- QA resolvido conforme o fluxo:
+  - `STANDARD_GATED`: QA aprovado;
+  - `QUICK_AUTOGO`: QA aprovado **ou** `QA_NOT_REQUIRED_WITH_REASON`;
 - commit concluído, delegado externamente ou dispensado explicitamente conforme política;
 - PR resolvido como `OPENED`, `EXTERNAL`, `NOT_REQUESTED` ou `SKIPPED_BY_USER`;
 - usuário autorizou `ARQUIVAR`.
@@ -79,7 +81,7 @@ SEARCH_TAGS:
 ```
 
 ## `STATE.md`
-Compactar para estado final. Preservar decisões, contratos, arquivos, riscos e referências de entrega; remover detalhes operacionais sem valor futuro.
+Manter como checkpoint final mínimo: `LIFECYCLE=DONE`, estados finais de Judge/QA/Commit/PR e referências curtas necessárias. Decisões, contratos, arquivos, riscos e histórico útil pertencem a `11-archive.md`, não devem inflar o STATE.
 
 ## `FEATURE_INDEX.md`
 Adicionar entrada pequena pesquisável por:

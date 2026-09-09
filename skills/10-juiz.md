@@ -102,8 +102,30 @@ O nível não altera o gate do Judge; altera somente profundidade de revisão:
 - `BLOCKED`: falta evidência essencial para julgar.
 
 ## Em FAIL
-Gerar findings objetivos:
+
+Todo `FAIL` deve ser **classificado antes de qualquer retorno de fluxo**. O Judge não decide implementação nem edita RED; ele classifica a natureza do problema e produz evidência objetiva.
+
+Classes permitidas:
+
 ```text
+IMPLEMENTATION_DEFECT
+RED_CONTRACT_DEFECT
+DISCOVERY_GAP
+REQUIREMENT_AMBIGUITY
+```
+
+Definições:
+
+- `IMPLEMENTATION_DEFECT`: requisitos/solução/RED continuam válidos; o código não atende.
+- `RED_CONTRACT_DEFECT`: o RED aprovado representa incorretamente o comportamento esperado.
+- `DISCOVERY_GAP`: surgiu fato/regra/condição relevante de código/contrato não descoberta antes.
+- `REQUIREMENT_AMBIGUITY`: o finding expõe decisão de negócio/produto que não pode ser inferida com segurança.
+
+Gerar findings objetivos:
+
+```text
+JUDGE_RESULT: FAIL
+JUDGE_FAIL_CLASS: <classe>
 FINDING_ID:
 AC_AFFECTED:
 EVIDENCE:
@@ -111,9 +133,24 @@ EXPECTED:
 ACTUAL:
 SEVERITY:
 REQUIRED_CHANGE:
+NEW_FACT_IF_ANY:
 ```
 
-Voltar ao EXECUTOR. Depois: GREEN -> novo Judge em contexto novo.
+Roteamento obrigatório:
+
+```text
+IMPLEMENTATION_DEFECT
+-> REWORK_IMPLEMENTATION [EXECUTOR]
+
+RED_CONTRACT_DEFECT
+DISCOVERY_GAP
+REQUIREMENT_AMBIGUITY
+-> JUDGE_RECOVERY [HEAD_STRONG]
+```
+
+O Judge **não manda genericamente voltar para RED**. Ele também não solicita `REOPEN RED` diretamente; isso só pode ocorrer após `skills/17-judge-recovery.md` analisar o finding e apresentar o impacto ao usuário.
+
+Depois de qualquer correção: `GREEN_VALIDATION -> JUDGING` novamente em contexto fresh/read-only.
 
 ## Segundo juiz
 Recomendado para bug de produção, cross-repo, risco alto ou divergência. O segundo juiz também deve ter contexto novo e read-only.

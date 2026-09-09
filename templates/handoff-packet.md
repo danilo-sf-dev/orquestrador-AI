@@ -30,6 +30,9 @@ WRITE:
   -
 
 EXPECTED_OUTPUT:
+
+JUDGE_FAIL_CLASS: # somente em recovery
+RECOVERY_DECISION: # somente em recovery
 ```
 
 ## Regras
@@ -40,3 +43,28 @@ EXPECTED_OUTPUT:
 - `READ` é derivado do frontmatter da skill destino.
 - `DO_NOT_READ` incorpora `forbidden_reads` da skill destino.
 - `WRITE` respeita `writes` e `forbidden_writes`.
+
+
+## Model routing
+
+```yaml
+CURRENT_MODEL_ROLE:
+NEXT_MODEL_ROLE:
+ROUTING_MODE:
+MODEL_HANDOFF_REQUIRED:
+CONFIRMATION_PHRASE:
+```
+
+
+## Recovery pós-Judge
+
+Quando `JUDGE_STATUS=FAIL`, o handoff deve incluir somente o finding relevante e sua classificação.
+
+```yaml
+JUDGE_RESULT: FAIL
+JUDGE_FAIL_CLASS:
+FINDING_IDS: []
+RECOVERY_ARTIFACT:
+```
+
+Não repassar o histórico completo das tentativas do executor.

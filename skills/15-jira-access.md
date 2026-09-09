@@ -3,16 +3,19 @@ name: jira-access
 description: >
   Acessa uma issue do Jira a partir de uma URL ou issue key, usando
   credenciais locais armazenadas em infrastructure/jira/jira-auth.local.json.
-model_role: ECONOMICAL
+preferred_model_role: ECONOMICAL
 context_loading: lazy
 
 reads:
   - infrastructure/jira/jira-auth.local.json
 
 writes:
-  - .ai/features/<JIRA-ID>/00-jira.md
+  - jira_context_ephemeral
 
 forbidden_writes:
+  - .ai/
+  - STATE.md
+  - 00-jira.md
   - jira_credentials
   - auth_config_contents
   - secrets
@@ -44,7 +47,9 @@ e deve:
 3. consultar a API REST do Jira;
 4. interpretar o JSON retornado;
 5. gerar o contexto normalizado da issue;
-6. nunca exibir, registrar ou persistir o token/e-mail de autenticação fora da chamada.
+6. devolver contexto normalizado **efêmero** ao orquestrador;
+7. nunca criar `.ai/`, `STATE.md` ou `00-jira.md` nesta skill;
+8. nunca exibir, registrar ou persistir o token/e-mail de autenticação fora da chamada.
 
 ## Arquivo local de autenticação
 
@@ -157,10 +162,8 @@ infrastructure/jira/jira-auth.local.json
 
 ## Saída esperada
 
-Produzir contexto normalizado para o orquestrador e, quando aplicável, escrever:
+Produzir `JIRA_CONTEXT_READY=true` + contexto normalizado **somente em memória da sessão**.
 
-```text
-.ai/features/<JIRA-ID>/00-jira.md
-```
+A persistência pertence a `skills/01-intake-jira.md`, que primeiro protege `.ai/` no `.gitignore` e só então cria `.ai/features/<JIRA-ID>/STATE.md` e `00-jira.md`.
 
 A saída nunca deve conter credenciais.

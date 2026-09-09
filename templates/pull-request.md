@@ -1,109 +1,49 @@
-# Pull Request — <JIRA-ID> <Título>
+# PR manual — <JIRA-ID>
 
-> Template canônico interno da feature. Sempre criar este arquivo em
-> `.ai/features/<JIRA-ID>/delivery/pull-request.md` quando o usuário solicitar abertura de PR.
-> Se o repositório possuir template nativo de PR/MR, respeitar o template do projeto
-> na publicação remota e usar este documento como fonte de verdade para preenchê-lo.
+> Artefato local para input manual. Nunca representa PR/MR criado remotamente.
 
-## Resumo
+## Título
 
-<!-- Objetivo do PR em 2–4 linhas, derivado do Jira/PRD e do resultado implementado. -->
+```text
+<JIRA-ID> <Título curto e objetivo da história>
+```
 
-## Contexto da feature
+## Descrição
 
-| Campo | Valor |
-|---|---|
-| Jira | <JIRA-ID ou link> |
-| Feature | <título> |
-| Repositório | <repo> |
-| Source branch | <branch atual> |
-| Target/Base branch | <branch solicitada pelo usuário> |
-| Provider | <GitHub/GitLab/Azure DevOps/Bitbucket/outro> |
-| PR/MR | <número e URL após criação> |
+```markdown
+## [<JIRA-ID>](<LINK_JIRA>) - <Título da história>
 
-## Critérios de aceite
+<Resumo funcional curto>:
 
-| AC | Status | Evidência principal |
-|---|---|---|
-| AC1 | PASS / RISK / BLOCKED | |
+- <mudança principal>
+- <comportamento/integração relevante>
+- <impacto funcional relevante>
 
-## O que foi alterado
+<Outro assunto funcional, somente se necessário>:
 
-<!-- Lista objetiva derivada do implementation summary + diff real. -->
+- <alteração relacionada>
+- <comportamento preservado>
+- <regra/validação importante>
 
--
--
--
+Testes:
 
-## Testes unitários — RED → GREEN
+- <teste/validação real>
+- <cenário relevante>
+- <regressão verificada>
 
-- [ ] `red-tests.lock` íntegro
-- [ ] Happy path relevante coberto
-- [ ] Edge cases aplicáveis cobertos ou justificados
-- [ ] Testes RED aprovados ficaram GREEN sem alteração indevida
-- [ ] Testes relevantes executados com sucesso
+História: [<JIRA-ID>](<LINK_JIRA>)
+Relacionadas: [<JIRA-ID>](<LINK_JIRA>)
+```
 
-### Cobertura dos critérios
+## Regras
 
-<!-- Relacionar AC -> teste(s), sem inventar cobertura. -->
-
-## Validação independente
-
-- Judge: PASS | PASS_WITH_RISKS | FAIL | BLOCKED
-- Judgement scope hash válido: yes | no
-- Riscos aceitos:
-- Findings pendentes:
-
-## Validações técnicas
-
-- [ ] Build/compilação relevante executado com sucesso
-- [ ] Validações configuradas no projeto executadas quando aplicável
-- [ ] Sem secrets/credenciais no diff
-- [ ] Sem mudanças não relacionadas no escopo do PR
-
-### Evidências
-
-<!-- Saídas curtas, CI, comandos, links ou limitações. -->
-
-## QA
-
-- [ ] QA Pack aprovado
-- Collection: <caminho/link>
-- Guia QA: <caminho/link>
-- Cenários/limitações relevantes:
-
-## Commits
-
-<!-- Preencher com git log source vs target/base. -->
-
-- `<sha>` <mensagem>
-
-## Compatibilidade e entrega
-
-- Breaking change: yes | no
-- Contratos afetados:
-- Dependências cross-repo:
-- Ordem de deploy, quando aplicável:
-- Rollback/mitigação, quando aplicável:
-
-## PRs relacionados — cross-repo
-
-<!-- Preencher somente quando a história envolver mais de um repositório. -->
-
-| Repo | PR/MR | Target | Status |
-|---|---|---|---|
-| | | | |
-
-## Checklist final
-
-- [ ] Escopo está alinhado ao Jira e ao PRD aprovado
-- [ ] Critérios de aceite estão rastreáveis para código/testes/QA
-- [ ] Não há mudança pós-Judge que invalide o julgamento
-- [ ] Documentação foi atualizada quando aplicável
-- [ ] Compatibilidade/risco relevante está documentado
-- [ ] Branch remota contém os commits pretendidos
-- [ ] Nenhum force push foi necessário para abrir o PR
-
-## Observações para review
-
-<!-- Riscos, limitações, pontos de atenção, decisões importantes e follow-ups. -->
+- remover seções que não se aplicam;
+- `Testes:` somente se houver teste/validação real;
+- `Relacionadas:` somente se houver história relacionada real;
+- preferir títulos funcionais específicos aos cabeçalhos genéricos;
+- não incluir checklist;
+- não incluir QA/Judge/commits/branches/provider;
+- não incluir bloqueios operacionais;
+- não dizer que o PR foi aberto;
+- descrição curta, preferencialmente 10–25 linhas;
+- conteúdo pronto para copiar/colar manualmente.

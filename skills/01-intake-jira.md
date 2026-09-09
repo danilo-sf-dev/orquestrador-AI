@@ -22,17 +22,26 @@ forbidden_writes:
 # Skill — Intake do Jira
 
 ## Entrada mínima
-- número do card Jira;
-- breve descrição.
+
+Receber o contexto normalizado efêmero produzido por `skills/15-jira-access.md`:
+
+```text
+JIRA_CONTEXT_READY=true
+JIRA_ID=<id>
+<dados normalizados da issue>
+```
+
+Não consultar Jira novamente sem necessidade e não pedir breve descrição se ela já estiver disponível no card.
 
 ## Persistência NEW
 
 No fluxo `NEW`, somente após o `JIRA-ID` estar conhecido:
 
-1. criar `.ai/features/<JIRA-ID>/`;
-2. instanciar `STATE.md` a partir do template;
-3. registrar `CURRENT_STATE=INTAKE` e a próxima ação;
-4. persistir o snapshot em `00-jira.md`.
+1. antes de criar `.ai/features/<JIRA-ID>/`, localizar o root Git canônico e garantir que `.ai/` está efetivamente ignorada; se necessário, adicionar `.ai/` ao `.gitignore` e confirmar a proteção com Git;
+2. criar `.ai/features/<JIRA-ID>/` somente após essa confirmação;
+3. instanciar `STATE.md` a partir do template;
+4. registrar `CURRENT_STATE=INTAKE` e a próxima ação;
+5. persistir o snapshot em `00-jira.md`.
 
 Nunca criar um `STATE.md` órfão antes de conhecer o Jira.
 

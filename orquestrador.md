@@ -1,6 +1,6 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.6.2  
+**Versão:** 1.6.6  
 **Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**. Cada skill define **como executar** a sua fase.
 
 ---
@@ -33,8 +33,17 @@ Não duplicar no orquestrador regras detalhadas de Jira, Discovery, RED, impleme
 10. PR só ocorre por solicitação explícita.
 11. Operações Git destrutivas, merge, rebase ou force push não são automáticos.
 12. Credenciais Jira nunca entram em memória, logs, commit ou PR.
+13. `ABRIR PR` significa gerar título/descrição para input manual; acesso/criação remota de PR/MR é proibido pela skill 13.
 13. `.ai/` é memória estritamente local e **nunca pode ser versionada**. Ao criar ou reutilizar `.ai/`, verificar imediatamente se o `.gitignore` do repositório contém uma regra efetiva que ignore `.ai/`; se não contiver, adicionar `.ai/` antes de continuar.
 14. Antes de qualquer commit, verificar novamente com Git que `.ai/` está ignorada e que nenhum arquivo sob `.ai/` está staged/tracked. Se a proteção falhar, o commit fica bloqueado até corrigir.
+15. Os nomes de estado exibidos ao usuário são **canônicos** e devem ser exatamente os definidos na tabela `Skills e papéis`. Não renomear, resumir, traduzir ou agrupar estados em checklists/status.
+16. Em `ROUTING_MODE=manual`, **toda mudança de papel de modelo é um gate obrigatório**. A próxima skill não pode ser executada com o papel/modelo anterior.
+17. Antes de cada fase, exibir um `PHASE BANNER` com `STATE`, `SKILL`, `ROLE`, `MODEL_SUGGESTED` e `USER_ACTION`. O banner é a fonte visual de verdade para o usuário.
+18. Se o papel requerido pela próxima fase for diferente do papel atual e o runtime não trocar modelo automaticamente, parar em `MODEL_HANDOFF_REQUIRED` e aguardar confirmação do usuário após a troca manual.
+19. `Judge FAIL` nunca retorna genericamente para RED. O Judge deve classificar o `FAIL` como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
+20. `IMPLEMENTATION_DEFECT` retorna somente para `REWORK_IMPLEMENTATION`; as outras classes passam por `JUDGE_RECOVERY [HEAD_STRONG]` antes de qualquer mudança em solução/PRD/RED.
+21. `REOPEN RED` é uma exceção explícita: somente após recovery justificar impacto e o usuário responder exatamente `REOPEN RED`.
+22. `RED_REVIEW` e `RED_EXECUTION` são estados diferentes: revisão/aprovação não pode ser apresentada como se os testes já tivessem sido criados/executados/locked.
 
 ---
 
@@ -117,6 +126,29 @@ Se `.ai/` já existir ao iniciar/resumir uma feature, a mesma verificação é o
 
 ---
 
+## 3.5 Contrato visual de fase e troca de modelo
+
+Antes de cada fase, mostrar a fonte visual de verdade:
+
+```text
+PHASE
+STATE: <CANONICAL_STATE>
+STATUS: PENDING | IN_PROGRESS | BLOCKED | COMPLETE
+SKILL: <arquivo.md>
+ROLE: <ROLE>
+MODEL_SUGGESTED: <binding da sessão>
+NEXT_ACTION: <ação canônica>
+USER_ACTION: <ação necessária ou AUTO_CONTINUE>
+```
+
+Usar somente estados canônicos da tabela `Skills e papéis` mais estados de controle (`MODEL_HANDOFF_REQUIRED`, `JUDGE_HANDOFF`, `WAITING_GO`). Nunca substituir por agrupamentos como `RED + lock`, `Implementação + GREEN` ou `Judge + QA + Commit`.
+
+Se `ROUTING_MODE=manual` e `NEXT_MODEL_ROLE != CURRENT_MODEL_ROLE`, salvar o estado, marcar `MODEL_HANDOFF_REQUIRED=true`, mostrar o banner e **parar**. Só executar a próxima skill após confirmação específica da troca (`CONTINUAR RED`, `CONTINUAR JUDGE`, etc.). Em routing automático sem confirmação técnica da troca, tratar como manual.
+
+Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` e `NEXT_ACTION`; listar o fluxo completo somente se solicitado.
+
+---
+
 ## 4. Skills e papéis
 
 | Estado | Skill | Papel |
@@ -130,12 +162,15 @@ Se `.ai/` já existir ao iniciar/resumir uma feature, a mesma verificação é o
 | `SOLUTION_REVIEW` | `05-solucao-proposta.md` | `HEAD_STRONG` |
 | `PRD_PLAN_REVIEW` | `06-prd-plano.md` | `HEAD_STRONG` |
 | `RED_REVIEW` | `07-testes-red.md` | `EXECUTOR` |
+| `RED_EXECUTION` | `07-testes-red.md` | `EXECUTOR` |
 | `IMPLEMENTING` | `08-implementacao-go.md` | `EXECUTOR` |
+| `REWORK_IMPLEMENTATION` | `08-implementacao-go.md` | `EXECUTOR` |
 | `GREEN_VALIDATION` | `09-validacao-green.md` | `EXECUTOR` |
 | `JUDGING` | `10-juiz.md` | `JUDGE_PRIMARY` |
+| `JUDGE_RECOVERY` | `17-judge-recovery.md` | `HEAD_STRONG` |
 | `QA_REVIEW` | `11-qa-pack.md` | `EXECUTOR` |
 | `COMMIT_REVIEW` | `12-commit-workflow.md` | `EXECUTOR` |
-| `PR_READY` | `13-pull-request-workflow.md` | `EXECUTOR` |
+| `PR_DESCRIPTION` | `13-pull-request-workflow.md` | `EXECUTOR` |
 | `READY_TO_ARCHIVE` | `14-arquivamento.md` | `ECONOMICAL` |
 | `QUICK_AUTOGO` | `16-quick-autogo.md` | `EXECUTOR` |
 
@@ -159,28 +194,52 @@ Se o runtime não trocar modelos automaticamente, a troca é manual no handoff.
 ## 6. Fluxo `STANDARD_GATED`
 
 ```text
-JIRA_ACCESS
--> INTAKE
--> MEMORY_LOOKUP
--> DISCOVERY
--> INTERVIEW_OPTIONAL se necessário
--> SOLUTION_REVIEW       [APROVAR SOLUÇÃO]
--> PRD_PLAN_REVIEW       [APROVAR PRD/PLANO]
--> RED_REVIEW            [APROVAR RED]
--> WAITING_GO            [GO]
--> IMPLEMENTING
--> GREEN_VALIDATION
+JIRA_ACCESS            [ECONOMICAL]
+-> INTAKE              [ECONOMICAL]
+-> MEMORY_LOOKUP       [ECONOMICAL]
+-> DISCOVERY           [ECONOMICAL]
+-> MODEL_HANDOFF_REQUIRED se próxima fase exigir HEAD_STRONG
+-> INTERVIEW_OPTIONAL  [HEAD_STRONG] se necessário
+-> SOLUTION_REVIEW     [HEAD_STRONG] [APROVAR SOLUÇÃO]
+-> PRD_PLAN_REVIEW     [HEAD_STRONG] [APROVAR PRD/PLANO]
+-> MODEL_HANDOFF_REQUIRED para EXECUTOR
+-> RED_REVIEW          [EXECUTOR] [APROVAR RED]
+-> RED_EXECUTION       [EXECUTOR] cria/executa RED + lock
+-> WAITING_GO          [EXECUTOR] [GO]
+-> IMPLEMENTING        [EXECUTOR]
+-> GREEN_VALIDATION    [EXECUTOR]
 -> JUDGE_HANDOFF
--> JUDGING
--> QA_REVIEW             [APROVAR QA]
--> COMMIT_REVIEW         [CONFIRMAR COMMIT]
--> PR_READY somente se solicitado
--> READY_TO_ARCHIVE
+-> MODEL_HANDOFF_REQUIRED para JUDGE_PRIMARY
+-> JUDGING             [JUDGE_PRIMARY]
+   -> PASS/PASS_WITH_RISKS: seguir para QA
+   -> FAIL + IMPLEMENTATION_DEFECT: handoff para EXECUTOR -> REWORK_IMPLEMENTATION -> GREEN_VALIDATION -> novo JUDGING fresh
+   -> FAIL + DISCOVERY_GAP|RED_CONTRACT_DEFECT|REQUIREMENT_AMBIGUITY: handoff para HEAD_STRONG -> JUDGE_RECOVERY
+-> MODEL_HANDOFF_REQUIRED para EXECUTOR quando QA for a próxima fase
+-> QA_REVIEW           [EXECUTOR] [APROVAR QA]
+-> COMMIT_REVIEW       [EXECUTOR] [CONFIRMAR COMMIT]
+-> PR_DESCRIPTION      [EXECUTOR] somente se solicitado; gera conteúdo para input manual, sem acesso remoto
+-> MODEL_HANDOFF_REQUIRED para ECONOMICAL quando archive for executado
+-> READY_TO_ARCHIVE    [ECONOMICAL]
 ```
 
 Regras detalhadas pertencem às skills correspondentes.
 
 `FAST | STANDARD | CRITICAL` controlam apenas profundidade/rigor neste fluxo; não removem gates.
+
+---
+
+## 6.1 Recovery após Judge FAIL
+
+Roteamento determinístico; detalhes em `skills/17-judge-recovery.md`:
+
+| `JUDGE_FAIL_CLASS` | Próximo estado | Papel | Regra |
+|---|---|---|---|
+| `IMPLEMENTATION_DEFECT` | `REWORK_IMPLEMENTATION` | `EXECUTOR` | RED/lock intocáveis; depois GREEN + Judge fresh |
+| `DISCOVERY_GAP` | `JUDGE_RECOVERY` | `HEAD_STRONG` | micro-investigação somente do finding |
+| `RED_CONTRACT_DEFECT` | `JUDGE_RECOVERY` | `HEAD_STRONG` | não editar RED até recovery + autorização |
+| `REQUIREMENT_AMBIGUITY` | `JUDGE_RECOVERY` | `HEAD_STRONG` | perguntar somente a decisão mínima necessária |
+
+`JUDGE_RECOVERY` nunca reinicia Discovery completo. `REOPEN RED` só existe quando a skill 17 justificar impacto e o usuário responder exatamente `REOPEN RED`; depois ocorre handoff para `EXECUTOR`, `RED_REVIEW` aplica somente o delta aprovado e então executa nova `RED_EXECUTION`.
 
 ---
 
@@ -208,7 +267,7 @@ QA_DECISION
 COMMIT_REVIEW
 ```
 
-No `QUICK_READY_FOR_JUDGE`, parar para troca manual para `JUDGE_PRIMARY` quando o runtime não puder trocar automaticamente.
+No `QUICK_AUTOGO`, após `JIRA_ACCESS [ECONOMICAL]`, aplicar `MODEL_HANDOFF_REQUIRED` para `EXECUTOR` antes do Quick Contract quando o roteamento for manual. No `QUICK_READY_FOR_JUDGE`, aplicar novamente o gate para `JUDGE_PRIMARY`. `IMPLEMENTATION_DEFECT` pode voltar a rework do QUICK; qualquer `DISCOVERY_GAP`, `RED_CONTRACT_DEFECT` ou `REQUIREMENT_AMBIGUITY` aborta o QUICK e migra para `JUDGE_RECOVERY` no fluxo comum. Após Judge PASS, se houver QA/Commit com `EXECUTOR`, aplicar novo handoff antes de continuar.
 
 ---
 
@@ -281,6 +340,8 @@ red-tests.lock
 09-qa-tests.md
 10-qa-guide.md
 11-archive.md
+recovery/
+  judge-recovery-<N>.md
 qa/
 delivery/
   commit.md
@@ -311,12 +372,16 @@ REPOSITORIES:
 CURRENT_MODEL_ROLE:
 NEXT_MODEL_ROLE:
 JIRA_CONTEXT_READY:
+RED_APPROVED:
 RED_LOCKED:
+RED_REOPEN_COUNT:
 GREEN_STATUS:
 JUDGE_STATUS:
+JUDGE_FAIL_CLASS:
+RECOVERY_STATUS:
 QA_STATUS:
 COMMIT_STATUS:
-PR_STATUS:
+PR_STATUS: # NOT_REQUESTED | DESCRIPTION_READY | SKIPPED_BY_USER
 PENDING:
 ```
 
