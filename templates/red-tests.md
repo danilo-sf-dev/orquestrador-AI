@@ -1,9 +1,9 @@
 # Testes RED — <JIRA-ID>
 
-| AC/Regra/Risco | Tipo | Teste | Arquivo | Motivo do RED | Evidência | Aprovado |
-|---|---|---|---|---|---|---|
-| AC1 | HAPPY_PATH | | | | | |
-| AC1 | EDGE_CASE | | | | | |
+| AC/Regra/Risco | PLAN | DD | Tipo | Teste | Arquivo | Motivo do RED | Evidência | Aprovado |
+|---|---|---|---|---|---|---|---|---|
+| AC1 | PLAN-1 | | HAPPY_PATH | | | | | |
+| AC1 | PLAN-1 | DD-1 | EDGE_CASE | | | | | |
 
 ## Matriz de edge cases
 

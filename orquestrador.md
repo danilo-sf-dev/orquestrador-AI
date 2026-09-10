@@ -1,6 +1,6 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.6.6  
+**Versão:** 1.8.0
 **Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**. Cada skill define **como executar** a sua fase.
 
 ---
@@ -44,10 +44,18 @@ Não duplicar no orquestrador regras detalhadas de Jira, Discovery, RED, impleme
 20. `IMPLEMENTATION_DEFECT` retorna somente para `REWORK_IMPLEMENTATION`; as outras classes passam por `JUDGE_RECOVERY [HEAD_STRONG]` antes de qualquer mudança em solução/PRD/RED.
 21. `REOPEN RED` é uma exceção explícita: somente após recovery justificar impacto e o usuário responder exatamente `REOPEN RED`.
 22. `RED_REVIEW` e `RED_EXECUTION` são estados diferentes: revisão/aprovação não pode ser apresentada como se os testes já tivessem sido criados/executados/locked.
+23. Conclusões que mudam solução, plano ou julgamento devem apontar evidência e distinguir `FACT`, `INFERENCE` e `UNKNOWN`.
+24. Cada arquivo principal de skill deve permanecer abaixo de 400 linhas físicas. Detalhe condicional vai para referência focada e só é carregado quando o modo correspondente exigir.
+25. Planejamento e julgamento usam a cadeia `Jira/AC -> DD -> PLAN -> arquivo/diff -> teste/evidência`; itens sem origem ou validação explícita não entram silenciosamente no escopo.
+26. Revisão de qualidade arquitetural é opcional e só ocorre por solicitação explícita ou evidência de
+    problema estrutural consistente; patterns e mudanças arquiteturais não são objetivos por si só.
 
 ---
 
-## 3. Entrada única: `/orquestrador`
+## 3. Entrada única: referência a `orquestrador.md`
+
+No VS Code/Cursor, iniciar informando o caminho deste arquivo e pedindo para lê-lo e segui-lo. Não
+depender de comando registrado na interface.
 
 ### 3.1 RESUME antes de NEW
 
@@ -159,6 +167,7 @@ Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` 
 | `MEMORY_LOOKUP` | `02-memoria-feature.md` | `ECONOMICAL` |
 | `DISCOVERY` | `03-investigacao.md` | `ECONOMICAL` |
 | `INTERVIEW_OPTIONAL` | `04-entrevista-opcional.md` | `HEAD_STRONG` |
+| `TECHNICAL_QUALITY_REVIEW` | `18-qualidade-arquitetural.md` | `HEAD_STRONG` |
 | `SOLUTION_REVIEW` | `05-solucao-proposta.md` | `HEAD_STRONG` |
 | `PRD_PLAN_REVIEW` | `06-prd-plano.md` | `HEAD_STRONG` |
 | `RED_REVIEW` | `07-testes-red.md` | `EXECUTOR` |
@@ -189,6 +198,22 @@ Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` 
 
 Se o runtime não trocar modelos automaticamente, a troca é manual no handoff.
 
+### Roteamento por responsabilidade
+
+Roteamento otimiza o custo total esperado, incluindo releitura, tentativas, rework e nova validação —
+não apenas o preço de uma chamada.
+
+- `ECONOMICAL` coleta e compacta evidências; não encerra decisão arquitetural ambígua.
+- `HEAD_STRONG` resolve arquitetura, hipóteses concorrentes, segurança, concorrência/transação,
+  contrato de alto impacto e premissa técnica contestada.
+- `EXECUTOR` aplica plano aprovado; ambiguidade material ou falha repetida não autoriza improviso.
+- `JUDGE_*` preserva independência; força de modelo não substitui fresh context/read-only.
+
+Quando uma fase encontrar responsabilidade de outro papel, registrar a incerteza e a evidência,
+salvar o estado e rotear para a fase forte já responsável por aquela decisão (`TECHNICAL_QUALITY_REVIEW`,
+`SOLUTION_REVIEW`, `PRD_PLAN_REVIEW` ou `JUDGE_RECOVERY`). Depois da decisão, voltar ao papel econômico/executor; não
+manter `HEAD_STRONG` por precaução.
+
 ---
 
 ## 6. Fluxo `STANDARD_GATED`
@@ -200,6 +225,7 @@ JIRA_ACCESS            [ECONOMICAL]
 -> DISCOVERY           [ECONOMICAL]
 -> MODEL_HANDOFF_REQUIRED se próxima fase exigir HEAD_STRONG
 -> INTERVIEW_OPTIONAL  [HEAD_STRONG] se necessário
+-> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se requerido por evidência ou solicitação explícita
 -> SOLUTION_REVIEW     [HEAD_STRONG] [APROVAR SOLUÇÃO]
 -> PRD_PLAN_REVIEW     [HEAD_STRONG] [APROVAR PRD/PLANO]
 -> MODEL_HANDOFF_REQUIRED para EXECUTOR
@@ -225,6 +251,10 @@ JIRA_ACCESS            [ECONOMICAL]
 Regras detalhadas pertencem às skills correspondentes.
 
 `FAST | STANDARD | CRITICAL` controlam apenas profundidade/rigor neste fluxo; não removem gates.
+
+`TECHNICAL_QUALITY_REVIEW` não cria gate adicional. Sua saída é insumo opcional da solução e pode
+concluir `NO_CHANGE`. O fluxo `QUICK_AUTOGO` não executa essa revisão; pedido de melhoria estrutural
+ou evidência que a exija deve migrar para `STANDARD_GATED`.
 
 ---
 
@@ -279,6 +309,7 @@ Por chamada carregar apenas:
 ORCHESTRATOR_CORE
 + STATE.md
 + skill atual
++ referência condicional explicitamente roteada pela skill atual
 + reads permitidos
 + código necessário
 ```
@@ -293,6 +324,7 @@ transcript completo
 raw discovery logs
 hipóteses descartadas
 outras features inteiras
+todas as referências de uma skill de uma vez
 ```
 
 Para troca de papel/modelo usar `templates/handoff-packet.md` com:
@@ -329,6 +361,7 @@ Estrutura estável:
 STATE.md
 00-jira.md
 01-discovery.md
+01-quality-review.md  # somente quando TECHNICAL_QUALITY_REVIEW ocorrer
 02-solution.md
 03-prd.md
 04-implementation-plan.md
@@ -420,7 +453,7 @@ Cenários ajustam profundidade, não regras centrais de segurança.
 ## 13. Loop operacional
 
 ```text
-/orquestrador
+referenciar orquestrador.md
 -> RESUME ou NEW
 -> se NEW: FLOW_SELECTION
 -> JIRA_ACCESS

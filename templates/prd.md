@@ -39,6 +39,10 @@
 
 ## Integrações
 
+### Falhas e resiliência aplicáveis
+
+<!-- Timeout, retry, fallback, indisponibilidade, duplicidade/idempotência e ordem, somente quando relevantes. -->
+
 ## Erros/status esperados
 
 ## Compatibilidade
@@ -46,3 +50,13 @@
 ## Riscos
 
 ## Decisões aprovadas
+
+| DD | Contexto | Decisão | Trade-offs aceitos | Validação |
+|---|---|---|---|---|
+| DD-1 | | | | |
+
+## Incertezas restantes
+
+| Item | FACT/INFERENCE/UNKNOWN | Impacto | Tratamento |
+|---|---|---|---|
+| | | | |
