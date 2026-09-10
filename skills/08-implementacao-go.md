@@ -50,18 +50,29 @@ Implementar o mínimo necessário para satisfazer o plano e levar os testes sela
 ## Regras
 1. Ler `red-tests.lock` antes de editar.
 2. Não modificar testes RED selados.
-3. Seguir padrões do projeto e arquitetura existente.
+3. Seguir padrões válidos do projeto e arquitetura existente; preservar o estilo de build, testes,
+   logging, formatação e tratamento de erro já adotados.
 4. Evitar refactor fora de escopo salvo necessidade comprovada.
 5. Em cross-repo, preservar contrato e ordem de deploy definida.
 6. Registrar decisões emergentes em `STATE.md`.
 7. Se surgir decisão arquitetural nova que muda o plano, parar e escalar ao `HEAD_STRONG`.
 8. Se suspeitar que um teste RED está incorreto, **não pedir nem executar `REOPEN RED` diretamente**. Parar e rotear para `JUDGE_RECOVERY [HEAD_STRONG]`; somente esse recovery pode justificar a reabertura e pedir a autorização humana explícita `REOPEN RED`.
 9. Em `REWORK_IMPLEMENTATION`, ler apenas o finding/delta necessário; não reinvestigar a história inteira nem reabrir artefatos aprovados sem necessidade.
+10. Executar as unidades `PLAN-*` respeitando `DEPENDS_ON`, `AC_LINKS` e `DESIGN_DECISIONS`.
+11. Preferir padrões confirmados e promovidos para `02-solution.md`/`04-implementation-plan.md`;
+    divergência intencional deve ter motivo e risco registrados, nunca apenas preferência do executor.
+12. Não criar arquivo, abstração ou refactor que não possa ser ligado a AC, decisão aprovada, risco ou
+    necessidade técnica demonstrável.
+13. Aplicar a qualidade aprovada sem transformar heurísticas de tamanho, grep ou estilo em regras
+    rígidas. Preferir a menor implementação coesa, tipos/contratos claros e testes de comportamento;
+    não introduzir pattern por preferência do executor.
 
 ## `06-implementation-summary.md`
 Guardar somente:
 - arquivos alterados;
 - comportamento implementado;
+- unidades `PLAN-*` concluídas e seus `AC_LINKS`;
+- decisões `DD-*` aplicadas;
 - decisões novas aprovadas;
 - desvios do plano;
 - pendências;

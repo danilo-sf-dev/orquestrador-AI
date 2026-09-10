@@ -33,9 +33,10 @@ Demonstrar que a implementação atende os testes selados sem alterar a especifi
 2. Compilar.
 3. Rodar os testes unitários RED aprovados, incluindo happy path e edge cases selados.
 4. Conferir que a matriz de edge cases aprovada continua representada pelos testes lockados.
-5. Rodar testes relacionados/regressão proporcional ao risco.
-6. Validar hashes novamente.
-7. Verificar `git diff` dos arquivos de teste selados.
+5. Confirmar rastreabilidade `AC/regra -> DD/PLAN -> teste -> resultado` para o escopo implementado.
+6. Rodar testes relacionados/regressão proporcional ao risco.
+7. Validar hashes novamente.
+8. Verificar `git diff` dos arquivos de teste selados.
 
 ## Resultado inválido
 Se qualquer teste selado tiver sido modificado sem reabertura RED:

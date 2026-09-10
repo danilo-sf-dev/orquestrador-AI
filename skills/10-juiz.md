@@ -9,6 +9,7 @@ reads:
   - STATE.md
   - 00-jira.md
   - 02-solution.md
+  - 01-quality-review.md # somente quando presente
   - 03-prd.md
   - 04-implementation-plan.md
   - 05-red-tests.md
@@ -72,6 +73,32 @@ Avaliar:
 6. riscos não validados;
 7. cross-repo consistency;
 8. evidência suficiente para `READY_FOR_QA`.
+9. rastreabilidade `AC/Jira -> DD -> PLAN -> diff -> teste`;
+10. aderência aos padrões relevantes registrados na solução/plano aprovados, ou justificativa
+    objetiva para divergências;
+11. qualidade técnica proporcional ao diff: segurança, tratamento de erro, concorrência/transação,
+    desempenho, compatibilidade e manutenibilidade somente quando aplicáveis ao código alterado.
+
+Quando `01-quality-review.md` existir, verificar somente se decisões `TQ-*` promovidas para
+`DD-*`/plano foram implementadas ou justificadamente descartadas. Não exigir patterns, camadas ou
+refactors não aprovados; qualidade não é preferência estética nem pretexto para reabrir o escopo.
+
+Não reprovar por preferência estética nem aplicar checklist genérico sem relação com o diff. Todo
+finding deve apontar evidência verificável e consequência concreta.
+
+## Severidade e evidência
+
+Classificar findings:
+
+- `CRITICAL`: risco de segurança, perda/corrupção de dados, contrato quebrado ou requisito central não
+  atendido;
+- `MAJOR`: comportamento incorreto, regressão provável, decisão aprovada violada ou ausência de
+  validação material;
+- `MINOR`: melhoria localizada sem impedir o comportamento aprovado;
+- `RISK`: validação externa ou incerteza residual explicitamente aceita.
+
+`CRITICAL` ou `MAJOR` exige `FAIL`. `MINOR` ou `RISK` pode resultar em `PASS_WITH_RISKS` quando todos
+os critérios continuam atendidos.
 
 ## Selo do escopo julgado
 Antes de emitir `PASS` ou `PASS_WITH_RISKS`, registrar em `08-judgement.md`:
@@ -127,11 +154,14 @@ Gerar findings objetivos:
 JUDGE_RESULT: FAIL
 JUDGE_FAIL_CLASS: <classe>
 FINDING_ID:
+CATEGORY: REQUIREMENT | ARCHITECTURE | CONTRACT | TEST | SECURITY | PERFORMANCE | QUALITY | PROCESS
 AC_AFFECTED:
-EVIDENCE:
+PLAN_OR_DECISION_AFFECTED:
+EVIDENCE: <arquivo:linha, teste ou comando verificável>
 EXPECTED:
 ACTUAL:
-SEVERITY:
+SEVERITY: CRITICAL | MAJOR | MINOR | RISK
+CONFIDENCE: HIGH | MEDIUM | LOW
 REQUIRED_CHANGE:
 NEW_FACT_IF_ANY:
 ```

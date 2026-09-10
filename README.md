@@ -1,8 +1,8 @@
-# Workflow agêntico para Java/Spring Boot — V1.6.6
+# Workflow agêntico para Java/Spring Boot — V1.8.0
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo, testes unitários, QA, commit e Pull Request.
 
-## Foco da V1.6.6
+## Foco da V1.8.0
 
 1. **orquestrador pequeno**: estado + roteamento + gates + invariantes;
 2. **lazy loading por contrato** (`reads/writes/forbidden_*`);
@@ -15,8 +15,21 @@ Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs,
 9. **QA original preservado**;
 10. memória final compatível com `11-archive.md`;
 11. observabilidade de custo/contexto por card.
+12. discovery com evidência, confiança e hipóteses proporcionais ao risco;
+13. decisões arquiteturais ADR-lite, sem overengineering;
+14. plano rastreável `AC -> decisão -> unidade -> arquivo -> teste`;
+15. Judge com revisão técnica proporcional ao diff;
+16. skills principais abaixo de 400 linhas, com referências lazy-loaded quando necessário.
+17. revisão de qualidade arquitetural opcional, acionada apenas por problema estrutural comprovado ou
+    pedido explícito; busca simplicidade, manutenção e aderência ao padrão do projeto, não patterns
+    por preferência.
 
 A regra central é: **mesma ou maior qualidade com menos contexto fixo, menos releitura e menos reinvestigação**.
+
+Para decidir entre pedido direto, fluxo `QUICK` e fluxo `COMUM`, consulte
+[`guia-de-uso.md`](guia-de-uso.md). O guia também explica os papéis `ECONOMICAL`, `HEAD_STRONG`,
+`EXECUTOR`, `JUDGE_*` e `MULTIMODAL`, com exemplos de bugs, planejamento, arquitetura e dívida
+técnica.
 
 ---
 
@@ -45,8 +58,11 @@ Os nomes canônicos dos estados também devem aparecer sem renomear/agrupar etap
 
 ## Entrada única
 
+No VS Code/Cursor, iniciar referenciando o arquivo:
+
 ```text
-/orquestrador
+Leia e siga:
+"E:\Program Cursor\orquestrador\orquestrador\orquestrador.md"
 ```
 
 O orquestrador:
@@ -111,11 +127,13 @@ Durante uma fase, carregar apenas:
 orquestrador mínimo
 + STATE.md
 + skill atual
++ referência condicional indicada pela skill atual
 + reads permitidos
 + código/testes necessários
 ```
 
-README, demais skills, cenários, templates, transcript e logs brutos não entram automaticamente.
+README, demais skills, todas as referências, cenários, templates, transcript e logs brutos não
+entram automaticamente.
 
 ---
 
@@ -130,7 +148,7 @@ NEXT_ACTION
 SCENARIO
 ```
 
-Pode existir mais de uma feature `ACTIVE|PAUSED`. Se `/orquestrador` encontrar múltiplas candidatas sem Jira explícito, pergunta qual retomar.
+Pode existir mais de uma feature `ACTIVE|PAUSED`. Se `orquestrador.md` encontrar múltiplas candidatas sem Jira explícito, pergunta qual retomar.
 
 Etapas aprovadas não são refeitas sem motivo explícito.
 
@@ -148,6 +166,7 @@ No fluxo `NEW`, `STATE.md` só é criado depois que o Jira for informado; o boot
       STATE.md
       00-jira.md
       01-discovery.md
+      01-quality-review.md  # somente quando a revisão opcional ocorrer
       02-solution.md
       03-prd.md
       04-implementation-plan.md
@@ -181,6 +200,7 @@ JIRA_ACCESS [ECONOMICAL]
 -> DISCOVERY [ECONOMICAL]
 -> HANDOFF para HEAD_STRONG quando necessário
 -> INTERVIEW_OPTIONAL [HEAD_STRONG]
+-> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se evidência ou solicitação exigir
 -> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
 -> PRD_PLAN_REVIEW [HEAD_STRONG] [APROVAR PRD/PLANO]
 -> HANDOFF para EXECUTOR
@@ -216,7 +236,7 @@ Os três níveis mantêm **Solução → PRD/Plano → RED → GO → GREEN → 
 
 Testes RED devem incluir happy path e **edge cases aplicáveis** derivados de critérios, domínio, contratos e riscos.
 
-A V1.6.6 separa explicitamente:
+A esteira separa explicitamente:
 
 ```text
 RED_REVIEW    = desenhar/revisar o contrato + APROVAR RED
@@ -306,8 +326,10 @@ FEATURE_WARNING_USD=10
 
 ## Arquivos principais
 
+- `guia-de-uso.md`: entrada recomendada por cenário e explicação dos papéis de modelo;
 - `orquestrador.md`: core mínimo de estado/roteamento/gates/lazy loading;
 - `skills/`: execução detalhada por fase;
+- `skills/18-qualidade-arquitetural.md`: revisão opcional de qualidade, arquitetura e patterns;
 - `skills/cenarios/`: overlays on-demand sem alterar gates;
 - `templates/STATE.md`: memória operacional e RESUME;
 - `templates/handoff-packet.md`: troca compacta de agente/modelo.

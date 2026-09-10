@@ -18,9 +18,25 @@ PASS | PASS_WITH_RISKS | FAIL | BLOCKED
 
 ## Arquitetura/contratos
 
+## Rastreabilidade do plano
+
+| AC/Jira | DD | PLAN | Diff | Teste/evidência | Resultado |
+|---|---|---|---|---|---|
+| | | | | | |
+
+## Qualidade técnica proporcional ao diff
+
+| Dimensão aplicável | Resultado | Evidência | Risco |
+|---|---|---|---|
+| Segurança/erros/concorrência/desempenho/compatibilidade/manutenção | | | |
+
 ## Regressões/riscos
 
 ## Findings
+
+| ID | Categoria | Severidade | AC/PLAN/DD | Evidência | Esperado x atual | Confiança |
+|---|---|---|---|---|---|---|
+| | | | | | | |
 
 ## Conclusão para QA
 

@@ -18,7 +18,7 @@ forbidden_writes:
 # Skill — Bootstrap + Resume
 
 ## Objetivo
-Ser o bootstrap mínimo de `/orquestrador`: resolver feature, confirmar os bindings de modelo da **sessão**, definir `ROUTING_MODE` e decidir entre `RESUME` e `NEW` sem carregar a esteira inteira. Em roteamento manual, também estabelece o gate obrigatório de troca de papel antes de cada fase.
+Ser o bootstrap mínimo do fluxo orquestrador: resolver feature, confirmar os bindings de modelo da **sessão**, definir `ROUTING_MODE` e decidir entre `RESUME` e `NEW` sem carregar a esteira inteira. Em roteamento manual, também estabelece o gate obrigatório de troca de papel antes de cada fase.
 
 ## Preset sugerido da sessão
 

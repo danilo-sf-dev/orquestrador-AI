@@ -3,14 +3,29 @@
 ## Pré-condições
 
 ## Ordem de alteração
-1.
-2.
+
+| PLAN | Resultado observável | Depende de | ACs | DDs | Risco |
+|---|---|---|---|---|---|
+| PLAN-1 | | | | | LOW/MEDIUM/HIGH |
 
 ## Repositórios e componentes
 
 ## Arquivos confirmados
 
 ## Arquivos esperados (a validar)
+
+## Unidades de implementação
+
+### PLAN-1 — <resultado>
+
+- `DEPENDS_ON`:
+- `AC_LINKS`:
+- `DESIGN_DECISIONS`:
+- `FILES_CONFIRMED`:
+- `FILES_EXPECTED`:
+- `TESTS_REQUIRED`:
+- `VERIFICATION`:
+- `RISK`:
 
 ## Contratos
 
@@ -35,5 +50,11 @@
 ## Ordem de deploy/rollback
 
 ## Riscos
+
+## Matriz de rastreabilidade e impacto
+
+| AC/Jira | DD | PLAN | Arquivo/componente | Teste/evidência |
+|---|---|---|---|---|
+| | | | | |
 
 ## Definition of Done técnico

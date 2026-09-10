@@ -59,7 +59,8 @@ Produzir o **plano executável do RED** em `05-red-tests.md`, cobrindo happy pat
 ### Regras
 
 1. Ler somente código/testes relevantes em modo read-only.
-2. Mapear cada teste planejado para AC, regra, contrato ou risco explícito.
+2. Mapear cada teste planejado para AC/regra/risco e para a unidade `PLAN-*`; incluir `DD-*` quando a
+   decisão arquitetural determinar o comportamento verificado.
 3. Identificar happy path e edge cases aplicáveis.
 4. Não criar edge cases artificiais.
 5. Para cada cenário, marcar `COVERED_PLANNED`, `NOT_APPLICABLE` ou `DEFERRED_WITH_REASON`.
@@ -115,7 +116,8 @@ Materializar exatamente o contrato aprovado em `05-red-tests.md`, executar os te
 
 1. Criar/alterar somente arquivos de teste necessários ao RED aprovado.
 2. Não ampliar silenciosamente escopo, critérios ou matriz de testes.
-3. Cada teste novo deve corresponder ao plano aprovado.
+3. Cada teste novo deve corresponder a uma unidade `PLAN-*` e a uma origem aprovada; teste sem
+   rastreabilidade deve ser removido ou voltar para revisão.
 4. O RED deve falhar pelo motivo esperado para comportamento ainda não implementado.
 5. Se um teste passar inesperadamente, investigar antes de seguir:
    - comportamento já existe;
