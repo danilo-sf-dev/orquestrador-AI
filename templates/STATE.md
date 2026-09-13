@@ -26,7 +26,7 @@ TECHNICAL_QUALITY_REVIEW_STATUS: NOT_REQUIRED # NOT_REQUIRED | REQUIRED | COMPLE
 SOLUTION_DESIGN_STATUS: PENDING # PENDING | COMPLETE | NOT_APPLICABLE_QUICK
 SOLUTION_APPROVED: false
 SPEC_STATUS: PENDING # PENDING | APPROVED | STALE | NOT_APPLICABLE_QUICK
-PRD_PLAN_APPROVED: false # nome legado; representa aprovação da SPEC + plano
+SPEC_PLAN_APPROVED: false
 RED_APPROVED: false
 RED_LOCKED: false
 RED_REOPEN_COUNT: 0
@@ -51,9 +51,8 @@ LAST_COMPLETED_PHASE:
 - `BLOCKING_OPEN_QUESTIONS` é contagem; detalhes ficam em `01-requirements.md`.
 - `REQUIREMENT_ANALYSIS_STATUS=BLOCKED` não autoriza implementação ou SPEC final.
 - `JUDGE_FAIL_CLASS` só é preenchido quando `JUDGE_STATUS=FAIL`.
-- `RED_REOPEN_COUNT` incrementa somente após autorização humana explícita `REOPEN RED`.
-- `RECOVERY_STATUS` acompanha somente recovery pós-Judge; findings detalhados ficam no artefato de recovery.
-- `CURRENT_MODEL_ROLE` representa o papel realmente em execução, não o desejado.
-- Antes de trocar papel em `ROUTING_MODE=manual`, definir `NEXT_MODEL_ROLE` e `MODEL_HANDOFF_REQUIRED=true` e parar.
-- Após confirmação da troca manual, mover `NEXT_MODEL_ROLE -> CURRENT_MODEL_ROLE`, limpar `NEXT_MODEL_ROLE` e marcar `MODEL_HANDOFF_REQUIRED=false`.
+- `RED_REOPEN_COUNT` incrementa somente após autorização explícita `REOPEN RED`.
+- `RECOVERY_STATUS` acompanha recovery pós-Judge.
+- `CURRENT_MODEL_ROLE` representa o papel realmente em execução.
+- Em routing manual, mudança de papel exige handoff e confirmação antes de continuar.
 - Nunca guardar conteúdo detalhado da feature neste arquivo.

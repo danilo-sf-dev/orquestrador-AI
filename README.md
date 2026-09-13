@@ -1,4 +1,4 @@
-# Workflow agêntico — V1.9.1
+# Workflow agêntico — V1.9.2
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
 testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
@@ -12,15 +12,15 @@ A V1.9 mantém os controles de execução da V1.8 e fortalece o que acontece **a
 2. nova `Requirement Analysis` para gap scan, assumptions e open questions;
 3. nova `Solution Design` com **Senior Approach Check** proporcional;
 4. revisão arquitetural opcional preservada, sem transformar todo Jira em refactor;
-5. `03-prd.md` tratado semanticamente como **SPEC canônica**;
+5. `03-spec.md` como **SPEC canônica** da feature;
 6. rastreabilidade `R/Jira -> AC -> DD -> PLAN -> código/teste/evidência`;
 7. RED/GREEN com gates mais mecânicos;
 8. Judge com regra **evidence-or-zero** por critério;
 9. QUICK preservado: executa versões compactas de Requirement Analysis + Solution Check sem novos artefatos/gates;
 10. skills principais abaixo de 400 linhas e referências lazy-loaded quando necessário.
 
-A V1.9.1 adiciona a documentação humana organizada em `documentacao-usuario/` e um guardrail global
-`HUMAN_ONLY`: essa pasta é exclusiva do usuário e nunca deve entrar no contexto dos agentes.
+A V1.9.1 adicionou a documentação humana organizada em `documentacao-usuario/` e o guardrail global
+`HUMAN_ONLY`. A V1.9.2 consolida `SPEC` como nomenclatura canônica ativa, substituindo `PRD` no fluxo novo.
 
 Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
@@ -131,7 +131,7 @@ transcript, logs brutos ou features antigas completas.
   01-quality-review.md  # opcional
   02-design.md
   02-solution.md
-  03-prd.md             # nome legado; conteúdo = SPEC canônica
+  03-spec.md
   04-implementation-plan.md
   05-red-tests.md
   red-tests.lock
@@ -149,6 +149,10 @@ transcript, logs brutos ou features antigas completas.
 No QUICK, criar somente artefatos realmente usados. `.ai/` é sempre local e deve estar efetivamente
 ignorada pelo Git ao iniciar/reusar a memória e novamente antes de qualquer commit.
 
+> **Nota de legado:** features arquivadas em versões anteriores podem conter `03-prd.md` e nomes com
+> `PRD_PLAN_*`. Para leitura histórica, interprete esse PRD como o artefato predecessor da SPEC atual,
+> com conceito equivalente/próximo. Não propague a nomenclatura antiga para novas features.
+
 ## Fluxo COMUM
 
 ```text
@@ -162,7 +166,7 @@ JIRA_ACCESS [ECONOMICAL]
 -> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente quando requerida
 -> SOLUTION_DESIGN [HEAD_STRONG]
 -> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
--> PRD_PLAN_REVIEW [HEAD_STRONG] [APROVAR PRD/PLANO]
+-> SPEC_PLAN_REVIEW [HEAD_STRONG] [APROVAR SPEC/PLANO]
 -> HANDOFF EXECUTOR
 -> RED_REVIEW [EXECUTOR] [APROVAR RED]
 -> RED_EXECUTION [EXECUTOR] cria/executa RED + lock
@@ -206,8 +210,7 @@ arquitetura válida existente e escolher a menor mudança suficiente**.
 
 ## SPEC + Plano
 
-`skills/06-prd-plano.md` mantém `03-prd.md` por compatibilidade, mas o conteúdo passa a ser a SPEC
-canônica. A matriz principal é:
+`skills/06-spec-plano.md` cria `03-spec.md`, a SPEC canônica da feature. A matriz principal é:
 
 ```text
 R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/diff -> teste/evidência

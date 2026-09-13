@@ -46,6 +46,16 @@ Ao encontrar uma feature relacionada:
 
 Se existirem registros antigos `11-commit.md` / `12-pull-request.md`, tratá-los como legado. Novas features usam `delivery/commit.md` e `delivery/pull-request.md`.
 
+## Legado PRD -> SPEC
+
+Features antigas podem conter `03-prd.md`, `PRD_PLAN_REVIEW` ou `PRD_PLAN_APPROVED`. Esses nomes pertencem
+a versões anteriores do orquestrador. Para leitura histórica:
+
+- interpretar `03-prd.md` como o predecessor da atual `03-spec.md`;
+- tratar o conceito como equivalente/próximo ao contrato SPEC + plano usado hoje;
+- reutilizar somente decisões/contratos relevantes após revalidação;
+- nunca criar `03-prd.md` nem persistir `PRD_PLAN_*` em uma feature nova.
+
 ## Revalidação
 Após recuperar memória, verificar se o código atual ainda corresponde a endpoints, classes, contratos e decisões reutilizadas.
 

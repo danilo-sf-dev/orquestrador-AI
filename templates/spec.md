@@ -1,7 +1,5 @@
 # SPEC — <JIRA-ID> <Título>
 
-> Arquivo físico legado: `03-prd.md`. Semanticamente este documento é a SPEC canônica aprovada.
-
 ## Identidade
 - SPEC_ID:
 - Jira:
@@ -51,8 +49,6 @@
 ## API/Contratos
 
 ## Integrações e resiliência aplicável
-
-<!-- Timeout, retry, fallback, indisponibilidade, duplicidade/idempotência e ordem somente quando relevantes. -->
 
 ## Erros/status esperados
 

@@ -1,6 +1,6 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.9.1  
+**Versão:** 1.9.2  
 **Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**; cada skill define como executar sua fase.
 
 ## 1. Princípio central
@@ -21,7 +21,7 @@ Não duplicar aqui regras detalhadas das skills.
 5. `documentacao-usuario/**` é **HUMAN_ONLY** e possui exclusão global absoluta: nenhuma skill/agente pode ler, buscar, indexar, resumir, citar, incluir em handoff ou usar seu conteúdo como evidência, memória ou fonte de decisão. Se uma busca global retornar resultado desse path, ignorar sem abrir o arquivo. Esta regra tem precedência sobre `reads`, search-first, documentação local relevante e qualquer busca ampla no repositório.
 6. Transcript, logs brutos e features antigas completas não entram automaticamente no contexto.
 7. Fluxo comum é contract-driven: `Jira -> Discovery -> Requirements -> Design -> Solution -> SPEC -> RED -> Code -> GREEN -> Judge`.
-8. `03-prd.md` mantém o nome físico por compatibilidade, mas semanticamente é a **SPEC canônica** aprovada.
+8. `03-spec.md` é o artefato canônico da SPEC aprovada para novas features.
 9. Requirement Analysis separa `EXPLICIT_REQUIREMENT`, `IMPLICIT_NECESSITY`, `ASSUMPTION`, `OPEN_QUESTION`, `TECHNICAL_RISK`, `OPTIONAL_IMPROVEMENT`.
 10. `OPEN_QUESTION` bloqueia somente quando a resposta muda materialmente comportamento, contrato, negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
 11. Solution Design segue arquitetura válida existente por padrão, prefere a menor mudança suficiente e só propõe mudança estrutural com ganho material demonstrável.
@@ -46,6 +46,7 @@ Não duplicar aqui regras detalhadas das skills.
 30. Credenciais Jira nunca entram em memória, logs, commit ou PR.
 31. Em `ROUTING_MODE=manual`, toda mudança de papel é gate; sem confirmação técnica de troca automática, tratar como manual.
 32. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
+33. **Legado PRD:** features arquivadas por versões anteriores podem conter `03-prd.md`, `PRD_PLAN_REVIEW` e `PRD_PLAN_APPROVED`. Ao consultar memória antiga, interpretar esses nomes como predecessores da SPEC/plan atuais. Não usar nomenclatura PRD em novas features nem criar fallback operacional para ela.
 
 ## 3. NEW e RESUME
 
@@ -104,7 +105,7 @@ Se `ROUTING_MODE=manual` e o próximo papel diferir do atual, salvar estado, mar
 | `TECHNICAL_QUALITY_REVIEW` | `18-qualidade-arquitetural.md` | `HEAD_STRONG` |
 | `SOLUTION_DESIGN` | `04b-design-solucao.md` | `HEAD_STRONG` |
 | `SOLUTION_REVIEW` | `05-solucao-proposta.md` | `HEAD_STRONG` |
-| `PRD_PLAN_REVIEW` | `06-prd-plano.md` | `HEAD_STRONG` |
+| `SPEC_PLAN_REVIEW` | `06-spec-plano.md` | `HEAD_STRONG` |
 | `RED_REVIEW` | `07-testes-red.md` | `EXECUTOR` |
 | `RED_EXECUTION` | `07-testes-red.md` | `EXECUTOR` |
 | `WAITING_GO` | `08-implementacao-go.md` (aguarda autorização antes de iniciar) | `EXECUTOR` |
@@ -146,7 +147,7 @@ JIRA_ACCESS [ECONOMICAL]
 -> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se requerido
 -> SOLUTION_DESIGN [HEAD_STRONG]
 -> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
--> PRD_PLAN_REVIEW [HEAD_STRONG] [APROVAR PRD/PLANO]
+-> SPEC_PLAN_REVIEW [HEAD_STRONG] [APROVAR SPEC/PLANO]
 -> handoff EXECUTOR
 -> RED_REVIEW [EXECUTOR] [APROVAR RED]
 -> RED_EXECUTION [EXECUTOR] cria/executa RED + lock
@@ -213,7 +214,7 @@ Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar tr
   01-quality-review.md     # opcional
   02-design.md
   02-solution.md
-  03-prd.md                # SPEC canônica; nome legado
+  03-spec.md
   04-implementation-plan.md
   05-red-tests.md
   red-tests.lock
@@ -229,6 +230,10 @@ Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar tr
 ```
 
 No QUICK, criar somente artefatos realmente usados. `11-archive.md` é canônico; `13-archive.md` é legado.
+
+Ao consultar features antigas, `03-prd.md` significa o predecessor histórico da atual `03-spec.md`.
+O conteúdo pode ser reutilizado como memória após revalidação, mas nomes `PRD*` não devem ser copiados
+para o estado ou artefatos de uma feature nova.
 
 ## 11. STATE mínimo
 
@@ -250,7 +255,7 @@ TECHNICAL_QUALITY_REVIEW_STATUS:
 SOLUTION_DESIGN_STATUS:
 SOLUTION_APPROVED:
 SPEC_STATUS:
-PRD_PLAN_APPROVED:
+SPEC_PLAN_APPROVED:
 RED_APPROVED:
 RED_LOCKED:
 RED_REOPEN_COUNT:
