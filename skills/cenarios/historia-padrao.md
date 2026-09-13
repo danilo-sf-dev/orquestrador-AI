@@ -20,9 +20,9 @@ Nova história Jira com critérios de aceite e, frequentemente, endpoint/arquite
 ## Pipeline
 ```text
 bootstrap -> intake -> memory -> discovery
--> interview only if needed
+-> requirement analysis -> solution design
 -> solution [approve]
--> PRD/plan [approve]
+-> SPEC/plan [approve]
 -> RED [approve+lock]
 -> GO -> implementation -> GREEN
 -> Judge -> QA [approve] -> commit [confirm] -> archive
@@ -33,10 +33,10 @@ Se endpoint já estiver no Jira, discovery começa por ele. Não indexar workspa
 
 ## Modelo por fase
 - discovery: ECONOMICAL
-- solution/PRD/judge: HEAD_STRONG/JUDGE
+- requirements/solution/SPEC: HEAD_STRONG
+- judge: JUDGE_PRIMARY
 - implementation/RED/GREEN/QA: EXECUTOR
 - imagens: MULTIMODAL
-
 
 ## Regra de testes unitários
 Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras, contratos ou riscos.
