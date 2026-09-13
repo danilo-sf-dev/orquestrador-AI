@@ -41,32 +41,58 @@ forbidden_writes:
 # Skill — Arquivamento de feature
 
 ## Objetivo
-Transformar entrega em memória reutilizável, preservando apenas decisões, contratos e padrões caros de redescobrir.
+Transformar a entrega em memória reutilizável para futuras histórias/bugs, preservando apenas decisões,
+contratos e padrões que seriam caros de redescobrir.
 
 ## Compatibilidade
-`11-archive.md` é canônico. `13-archive.md` pode ser lido como legado. Commit/PR ficam em `delivery/`.
-Ao ler features antigas, `03-prd.md` representa o predecessor histórico da atual `03-spec.md`; usar seu conteúdo
-somente como memória revalidável, sem propagar nomenclatura PRD para novas features.
+`11-archive.md` é o nome canônico e estável da memória final. O número não representa fase cronológica.
+`13-archive.md` pode ser lido como legado; novas gravações usam `11-archive.md`. Commit/PR ficam em `delivery/`.
+
+Features antigas também podem conter `03-prd.md`; esse arquivo representa o predecessor histórico da
+atual `03-spec.md`. Seu conteúdo pode ser lido como memória revalidável, mas novas features usam somente SPEC.
 
 ## Pré-condições
 - Judge aprovado;
-- QA resolvido conforme fluxo;
-- commit concluído, externo ou dispensado; `DEFERRED` bloqueia archive;
-- PR resolvido conforme política;
+- QA resolvido conforme o fluxo (`STANDARD_GATED`: aprovado; QUICK: aprovado ou `QA_NOT_REQUIRED_WITH_REASON`);
+- commit concluído, externo ou dispensado explicitamente; `COMMIT_STATUS=DEFERRED` mantém archive bloqueado;
+- PR resolvido como `DESCRIPTION_READY`, `NOT_REQUESTED` ou `SKIPPED_BY_USER` conforme política vigente;
 - usuário autorizou `ARQUIVAR`.
 
 ## `11-archive.md`
-Guardar Jira, título, status, data, repos, endpoints, classes principais, resumo de fluxo/requisitos,
-decisões, regras, contratos, testes, QA, commits, PRs, riscos/limitações, relacionadas e tags.
+Manter conciso e pesquisável:
 
-Não copiar requirements/design/SPEC integralmente. Extrair somente conhecimento reutilizável.
+```text
+JIRA:
+TITLE:
+STATUS:
+DATE:
+REPOS:
+ENDPOINTS:
+MAIN_CLASSES:
+FLOW_SUMMARY:
+REQUIREMENTS_SUMMARY:
+DESIGN_DECISIONS:
+BUSINESS_RULES:
+CONTRACTS:
+TESTS:
+QA_ASSETS:
+COMMITS:
+PULL_REQUESTS:
+RISKS/LIMITATIONS:
+RELATED_FEATURES:
+SEARCH_TAGS:
+```
+
+Não copiar `01-requirements.md`, `02-design.md` ou SPEC integralmente. Extrair somente conhecimento
+reutilizável: decisão material, contrato, boundary, regra de negócio ou padrão comprovado.
 
 ## `STATE.md`
-Manter checkpoint final mínimo com `LIFECYCLE=DONE` e estados finais.
+Manter checkpoint final mínimo: `LIFECYCLE=DONE`, estados finais de Judge/QA/Commit/PR e referências
+curtas. Decisões, contratos, riscos e histórico útil ficam em `11-archive.md`.
 
 ## `FEATURE_INDEX.md`
 Adicionar entrada pequena pesquisável por Jira, endpoint, classe, domínio, integração, repo e tag.
 
 ## Regra
-Archive é memória, não diário. Não guardar transcript, logs gigantes, assumptions descartadas ou tentativas.
-Nunca inventar SHA, número ou URL de PR.
+O archive é memória, não diário. Não guardar transcript, logs gigantes, assumptions descartadas ou
+tentativas de implementação. Nunca inventar SHA, número ou URL de PR.

@@ -50,6 +50,8 @@
 
 ## Integrações e resiliência aplicável
 
+<!-- Timeout, retry, fallback, indisponibilidade, duplicidade/idempotência e ordem somente quando relevantes. -->
+
 ## Erros/status esperados
 
 ## Compatibilidade e consumidores

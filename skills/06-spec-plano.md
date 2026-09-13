@@ -32,8 +32,9 @@ BLOCKING_OPEN_QUESTIONS: 0
 ```
 
 ## Princípio da SPEC
-A SPEC descreve comportamento observável e decisões aprovadas. Ela não é resumo narrativo do chat nem
-documento genérico de produto.
+
+A SPEC descreve comportamento observável e decisões aprovadas. Ela não é um resumo narrativo do chat
+nem um documento de produto genérico.
 
 ```text
 Jira + evidence + human decisions
@@ -43,7 +44,8 @@ Jira + evidence + human decisions
     RED   PLAN    JUDGE
 ```
 
-Nenhuma fase posterior pode redefinir silenciosamente requisito, assumption material ou decisão de design.
+Nenhuma fase posterior pode redefinir silenciosamente requisito, assumption material ou decisão de
+design. Delta material volta à fase responsável.
 
 ## Estrutura obrigatória de `03-spec.md`
 
@@ -52,6 +54,7 @@ SPEC_ID: <JIRA>
 OBJECTIVE:
 SCOPE:
 OUT_OF_SCOPE:
+
 OBSERVABLE_BEHAVIOR:
 
 AC-01:
@@ -74,21 +77,42 @@ RELATED_FEATURES:
 Cada AC precisa de origem. Não criar AC para `OPTIONAL_IMPROVEMENT` não aprovado.
 
 ## Normalização de critérios
-Transformar `R-*` em critérios testáveis/observáveis sem alterar significado. Quando um requisito não for
-demonstrável por teste unitário, declarar evidência esperada (`integration`, `config`, `static verification`, `QA`, `external validation`).
 
-Antes de concluir, verificar somente lacunas aplicáveis: origem/formato de dados, cálculos, duplicidade/idempotência,
-timeout/retry/fallback, persistência/migração e compatibilidade de contratos.
+Transformar requisitos `R-*` em critérios testáveis/observáveis sem alterar significado. Quando um
+requisito não for demonstrável por teste unitário, declarar a evidência esperada (`integration`,
+`config`, `static verification`, `QA`, `external validation`).
 
-Se aparecer `OPEN_QUESTION` material, voltar para `REQUIREMENT_ANALYSIS`; não decidir aqui.
+Antes de concluir, verificar somente lacunas aplicáveis ao tipo de mudança:
+
+- origem e formato dos dados;
+- exemplo concreto para cálculo ou transformação;
+- duplicidade/idempotência e ordem para eventos;
+- timeout, retry, fallback e erro de dependência externa;
+- dados existentes e migração para mudanças persistentes;
+- compatibilidade para contratos consumidos por outros repos.
+
+Se aparecer nova `OPEN_QUESTION` material, **não decidir aqui**: voltar para `REQUIREMENT_ANALYSIS` com
+o delta. Lacuna que não muda implementação ou aceite deve ser risco/limitação, não pergunta infinita.
 
 ## Plano
-Deve conter sequência de implementação, repos, arquivos/componentes, contratos, migrações/configs,
-compatibilidade, testes unitários, edge cases, QA, ordem de deploy e rollback/mitigação quando relevante.
+Deve conter:
+- sequência de implementação;
+- repos impactados;
+- arquivos/componentes esperados;
+- contratos;
+- migrações/configs, se houver;
+- estratégia de backward compatibility;
+- testes unitários necessários, incluindo happy path e edge cases aplicáveis;
+- matriz inicial de edge cases/riscos a transformar em testes;
+- testes integrados/QA necessários;
+- ordem de deploy quando cross-repo;
+- rollback/mitigação quando relevante.
+
+Organizar o trabalho em unidades implementáveis:
 
 ```text
 PLAN_ID: PLAN-<N>
-OUTCOME:
+OUTCOME: <resultado observável, não atividade genérica>
 DEPENDS_ON: []
 AC_LINKS: []
 REQUIREMENT_LINKS: []
@@ -100,24 +124,33 @@ VERIFICATION:
 RISK: LOW | MEDIUM | HIGH
 ```
 
+As dependências devem formar ordem executável, sem ciclos. Não criar unidade "investigar" sem decisão
+ou artefato verificável como saída. Arquivos descobertos entram como `FILES_CONFIRMED`; caminhos ainda
+não existentes/inferidos ficam em `FILES_EXPECTED`.
+
 ## Rastreabilidade bidirecional
+
+Construir matriz compacta:
 
 ```text
 R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/componente -> teste/evidência
 ```
 
-Todo requisito/AC/decisão material precisa de unidade de plano/verificação; todo item do plano precisa ter origem justificável.
+Validar nos dois sentidos:
+
+- todo requisito/AC/decisão material possui unidade de plano e verificação;
+- toda unidade, arquivo esperado e teste planejado tem origem em requisito, AC, risco ou decisão;
+- alteração de contrato inclui consumidores, compatibilidade e ordem cross-repo;
+- risco material inclui mitigação, rollback ou validação;
+- item sem origem justificável sai do plano ou fica como melhoria opcional fora de escopo.
 
 ## SPEC freeze
-Ao aprovar, `03-spec.md` vira contrato para RED. Mudança material posterior exige delta explícito e
-roteamento à fase responsável; executor não altera SPEC para acomodar implementação.
+
+Ao aprovar, a versão de `03-spec.md` vira contrato para RED. Mudança material posterior exige delta
+explícito e roteamento à fase responsável; executor não pode alterar SPEC para acomodar implementação.
 
 ## Gate
-Parar e solicitar exatamente:
-
-```text
-APROVAR SPEC/PLANO
-```
+Parar e solicitar `APROVAR SPEC/PLANO`.
 
 Após aprovação:
 
@@ -129,5 +162,7 @@ NEXT_ACTION: DESIGN_RED
 ```
 
 ## Relação com memória anterior
-Quando a história altera comportamento anterior, registrar `EXTENDS`, `OVERRIDES`, `DEPRECATES` ou `RELATED`.
-O comportamento atual é definido pela SPEC mais nova aprovada.
+
+Quando a história altera comportamento já documentado em outra feature, registrar `EXTENDS`,
+`OVERRIDES`, `DEPRECATES` ou `RELATED`. A relação serve para busca/delta analysis; comportamento atual é
+definido pela SPEC mais nova aprovada, sem duplicar documentos antigos.
