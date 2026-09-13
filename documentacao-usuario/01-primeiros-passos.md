@@ -28,8 +28,16 @@ objetivamente testável e não exigir decisão arquitetural relevante.
 O QUICK faz uma análise compacta antes da aprovação e, após `AUTO-GO`, executa RED, lock,
 implementação e GREEN sem novas aprovações intermediárias até o handoff para o Judge.
 
-Não é adequado quando houver sinal material de banco/migração, mensageria, segurança, concorrência,
-contrato material entre serviços, cross-repo inesperado, regra de negócio ambígua ou decisão arquitetural.
+Não é adequado quando houver sinal material de:
+
+- banco/migração;
+- mensageria;
+- segurança;
+- concorrência/transação relevante;
+- contrato material entre serviços;
+- cross-repo inesperado;
+- regra de negócio ambígua;
+- decisão estrutural/arquitetural.
 
 Nesses casos o fluxo deve migrar para COMUM.
 

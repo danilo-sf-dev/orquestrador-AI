@@ -4,6 +4,8 @@
 
 ## Fluxo COMUM — `STANDARD_GATED`
 
+Use quando a história/bug precisa de entendimento completo, decisões materiais ou controle maior.
+
 ```text
 JIRA_ACCESS              Acesso ao Jira
     ↓
@@ -51,6 +53,8 @@ READY_TO_ARCHIVE         Pronto para arquivamento/memória final
 
 ## Onde o usuário normalmente para no COMUM
 
+Os principais gates são:
+
 ```text
 APROVAR SOLUÇÃO
 APROVAR SPEC/PLANO
@@ -64,6 +68,8 @@ ARQUIVAR
 Também pode existir troca manual de modelo entre fases quando `ROUTING_MODE=manual`.
 
 ## Fluxo QUICK — `QUICK_AUTOGO`
+
+Use para mudança simples, localizada e de baixo risco.
 
 ```text
 Jira
@@ -97,15 +103,29 @@ PR_DESCRIPTION se solicitado
 archive
 ```
 
-O QUICK não cria por formalidade artefatos completos de Discovery, Requirements, Design, SPEC e Plan.
-O contrato aprovado é o **Quick Contract**.
+O QUICK não cria apenas por formalidade os artefatos completos de Discovery, Requirements, Design,
+SPEC e Plan. O contrato aprovado é o **Quick Contract**.
 
 ## Quando QUICK vira COMUM
 
-O QUICK aborta para `STANDARD_GATED` se surgir `OPEN_QUESTION` material, banco/migração, mensageria,
-segurança, concorrência, cross-repo inesperado, contrato material, regra de negócio ambígua ou decisão arquitetural.
+O QUICK deve abortar para `STANDARD_GATED` se surgir algo que descaracterize uma tarefa simples, como:
+
+- `OPEN_QUESTION` material;
+- banco/migração;
+- mensageria;
+- segurança;
+- concorrência;
+- cross-repo inesperado;
+- contrato material entre serviços;
+- regra de negócio ambígua;
+- decisão estrutural/arquitetural.
+
+Isso não representa falha do fluxo; é proteção contra executar automaticamente uma mudança que passou
+a exigir análise maior.
 
 ## Fluxo após Judge FAIL
+
+O Judge classifica o problema antes de escolher o retorno.
 
 ```text
 IMPLEMENTATION_DEFECT
@@ -117,24 +137,55 @@ GREEN_VALIDATION
 JUDGING fresh novamente
 ```
 
-Para `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`:
+Para problemas que podem invalidar descoberta, requisito ou RED:
 
 ```text
+RED_CONTRACT_DEFECT
+DISCOVERY_GAP
+REQUIREMENT_AMBIGUITY
+    ↓
 JUDGE_RECOVERY [HEAD_STRONG]
+    ↓
+analisa somente o finding/delta
 ```
 
-Se o RED precisar mudar, o usuário autoriza exatamente `REOPEN RED`; depois há novo RED/lock, GREEN e Judge.
+O recovery pode concluir que basta corrigir implementação, que existe decisão humana pendente ou que o
+RED realmente precisa ser reaberto.
+
+Se o RED precisar mudar, o usuário deve autorizar exatamente:
+
+```text
+REOPEN RED
+```
+
+Depois disso há novo RED/lock, novo GREEN e novo Judge.
 
 ## Roteamento manual de modelos
 
-Mudança de papel pode interromper o fluxo para troca manual de modelo, por exemplo:
+Quando `ROUTING_MODE=manual`, uma mudança de papel pode interromper o fluxo antes da próxima etapa.
+Exemplo típico:
 
 ```text
 DISCOVERY [ECONOMICAL]
--> REQUIREMENT_ANALYSIS [HEAD_STRONG]
-
-GREEN_VALIDATION [EXECUTOR]
--> JUDGING [JUDGE_PRIMARY]
+    ↓
+handoff
+    ↓
+REQUIREMENT_ANALYSIS [HEAD_STRONG]
 ```
 
-A troca preserva custo e independência; não é fase funcional adicional.
+Outro ponto importante:
+
+```text
+GREEN_VALIDATION [EXECUTOR]
+    ↓
+handoff
+    ↓
+JUDGING [JUDGE_PRIMARY]
+```
+
+A troca existe para preservar custo e independência do Judge; não é uma nova fase funcional da história.
+
+## Nota de legado
+
+Em features antigas, `PRD_PLAN_REVIEW` e `APROVAR PRD/PLANO` correspondem historicamente ao que hoje é
+`SPEC_PLAN_REVIEW` e `APROVAR SPEC/PLANO`.
