@@ -1,4 +1,4 @@
-# Workflow agêntico para Java/Spring Boot — V1.9.1
+# Workflow agêntico — V1.9.1
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
 testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
@@ -257,6 +257,3 @@ MONTHLY_BUDGET_USD=40
 FEATURE_TARGET_USD=8
 FEATURE_WARNING_USD=10
 ```
-
-Economia deve vir de search-first, lazy loading, compactação, model routing e gates determinísticos —
-nunca de omitir requisito, teste ou validação material.
