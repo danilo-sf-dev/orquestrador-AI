@@ -1,30 +1,45 @@
-# PRD — <JIRA-ID> <Título>
+# SPEC — <JIRA-ID> <Título>
+
+> Arquivo físico legado: `03-prd.md`. Semanticamente este documento é a SPEC canônica aprovada.
+
+## Identidade
+- SPEC_ID:
+- Jira:
+- Status: DRAFT | APPROVED | STALE
 
 ## Objetivo
-
-## Contexto
 
 ## Escopo
 
 ## Fora de escopo
 
-## Relação com features anteriores
-
-<!-- Quando aplicável, registrar: EXTENDS | OVERRIDES | DEPRECATES | RELATED. -->
-
-| Relação | Feature/Jira anterior | O que muda / permanece |
-|---|---|---|
-| | | |
-
-## Comportamento atual
-
-## Comportamento desejado
+## Comportamento observável
 
 ## Critérios de aceite normalizados
 
-| AC | Comportamento | Evidência unitária | Evidência QA | Status |
+| AC | Origem `R-*`/Jira/decisão | Given | When | Then | Evidência esperada |
+|---|---|---|---|---|---|
+| AC-01 | | | | | UNIT_TEST / INTEGRATION / STATIC / QA / EXTERNAL |
+
+## Requisitos e rastreabilidade
+
+| Requisito | Classificação | Origem/Evidência | ACs |
+|---|---|---|---|
+| R-01 | EXPLICIT_REQUIREMENT / IMPLICIT_NECESSITY | | |
+
+## Assumptions aceitas
+
+| ID | Claim | Evidência | Impacto se errada | Confiança |
 |---|---|---|---|---|
-| AC1 | | | | |
+| A-01 | | | | |
+
+## Open Questions
+
+> Para SPEC aprovada, `BLOCKING=YES` deve ser zero.
+
+| ID | Pergunta | Blocking | Tratamento |
+|---|---|---|---|
+| | | YES / NO | |
 
 ## Regras de negócio e invariantes
 
@@ -33,30 +48,30 @@
 | BR-1 | BUSINESS_RULE | | |
 | INV-1 | INVARIANT | | |
 
-> Registrar apenas regras relevantes à história. Invariante é uma condição que deve permanecer verdadeira mesmo em edge cases.
-
 ## API/Contratos
 
-## Integrações
+## Integrações e resiliência aplicável
 
-### Falhas e resiliência aplicáveis
-
-<!-- Timeout, retry, fallback, indisponibilidade, duplicidade/idempotência e ordem, somente quando relevantes. -->
+<!-- Timeout, retry, fallback, indisponibilidade, duplicidade/idempotência e ordem somente quando relevantes. -->
 
 ## Erros/status esperados
 
-## Compatibilidade
+## Compatibilidade e consumidores
 
-## Riscos
+## Requisitos não funcionais aplicáveis
 
 ## Decisões aprovadas
 
-| DD | Contexto | Decisão | Trade-offs aceitos | Validação |
+| DD | Requisitos | Decisão | Trade-offs aceitos | Validação |
 |---|---|---|---|---|
 | DD-1 | | | | |
 
-## Incertezas restantes
+## Riscos e validação
 
-| Item | FACT/INFERENCE/UNKNOWN | Impacto | Tratamento |
-|---|---|---|---|
-| | | | |
+## Relação com features anteriores
+
+<!-- EXTENDS | OVERRIDES | DEPRECATES | RELATED -->
+
+| Relação | Feature/Jira anterior | O que muda / permanece |
+|---|---|---|
+| | | |

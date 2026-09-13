@@ -5,24 +5,32 @@
 - Read-only: yes
 - Judge model role:
 
+## Preconditions
+- SPEC_STATUS:
+- BLOCKING_OPEN_QUESTIONS:
+- RED_LOCKED:
+- GREEN_STATUS:
+
 ## Veredito
 PASS | PASS_WITH_RISKS | FAIL | BLOCKED
 
-## Avaliação por critério
+## Evidence-or-zero por critério
 
-| AC | Resultado | Evidência | Gap/Risco |
-|---|---|---|---|
-| AC1 | | | |
+| AC | Requisito | Resultado | Teste/Evidência | Código/Diff | Resultado observável | Gap/Risco |
+|---|---|---|---|---|---|---|
+| AC-01 | R-01 | PASS / FAIL / BLOCKED / PENDING_EXTERNAL | | | | |
+
+> `PASS` exige evidência concreta suficiente. Ausência de evidência não pode ser compensada por "parece correto".
 
 ## Integridade RED/GREEN
 
 ## Arquitetura/contratos
 
-## Rastreabilidade do plano
+## Rastreabilidade
 
-| AC/Jira | DD | PLAN | Diff | Teste/evidência | Resultado |
-|---|---|---|---|---|---|
-| | | | | | |
+| R/Jira | AC | DD | PLAN | Diff | Teste/evidência | Resultado |
+|---|---|---|---|---|---|---|
+| | | | | | | |
 
 ## Qualidade técnica proporcional ao diff
 
@@ -34,7 +42,7 @@ PASS | PASS_WITH_RISKS | FAIL | BLOCKED
 
 ## Findings
 
-| ID | Categoria | Severidade | AC/PLAN/DD | Evidência | Esperado x atual | Confiança |
+| ID | Categoria | Severidade | R/AC/PLAN/DD | Evidência | Esperado x atual | Confiança |
 |---|---|---|---|---|---|---|
 | | | | | | | |
 

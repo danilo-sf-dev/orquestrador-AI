@@ -1,265 +1,217 @@
-# Workflow agêntico para Java/Spring Boot — V1.8.0
+# Workflow agêntico para Java/Spring Boot — V1.9.0
 
-Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo, testes unitários, QA, commit e Pull Request.
+Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
+testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
+controlado e custo previsível**.
 
-## Foco da V1.8.0
+## Foco da V1.9.0
 
-1. **orquestrador pequeno**: estado + roteamento + gates + invariantes;
-2. **lazy loading por contrato** (`reads/writes/forbidden_*`);
-3. **RESUME entre sessões** sem reinvestigar;
-4. **persistência somente após Jira conhecido** no fluxo NEW;
-5. **handoff compacto** entre papéis/modelos;
-6. discovery dirigido;
-7. `FAST|STANDARD|CRITICAL` controlando **profundidade, nunca gates**;
-8. **gates originais preservados**;
-9. **QA original preservado**;
-10. memória final compatível com `11-archive.md`;
-11. observabilidade de custo/contexto por card.
-12. discovery com evidência, confiança e hipóteses proporcionais ao risco;
-13. decisões arquiteturais ADR-lite, sem overengineering;
-14. plano rastreável `AC -> decisão -> unidade -> arquivo -> teste`;
-15. Judge com revisão técnica proporcional ao diff;
-16. skills principais abaixo de 400 linhas, com referências lazy-loaded quando necessário.
-17. revisão de qualidade arquitetural opcional, acionada apenas por problema estrutural comprovado ou
-    pedido explícito; busca simplicidade, manutenção e aderência ao padrão do projeto, não patterns
-    por preferência.
+A V1.9 mantém os controles de execução da V1.8 e fortalece o que acontece **antes do RED**:
 
-A regra central é: **mesma ou maior qualidade com menos contexto fixo, menos releitura e menos reinvestigação**.
+1. Discovery econômico com **Codebase Recon / entry-point-first**;
+2. nova `Requirement Analysis` para gap scan, assumptions e open questions;
+3. nova `Solution Design` com **Senior Approach Check** proporcional;
+4. revisão arquitetural opcional preservada, sem transformar todo Jira em refactor;
+5. `03-prd.md` tratado semanticamente como **SPEC canônica**;
+6. rastreabilidade `R/Jira -> AC -> DD -> PLAN -> código/teste/evidência`;
+7. RED/GREEN com gates mais mecânicos;
+8. Judge com regra **evidence-or-zero** por critério;
+9. QUICK preservado: executa versões compactas de Requirement Analysis + Solution Check sem novos artefatos/gates;
+10. skills principais abaixo de 400 linhas e referências lazy-loaded quando necessário.
 
-Para decidir entre pedido direto, fluxo `QUICK` e fluxo `COMUM`, consulte
-[`guia-de-uso.md`](guia-de-uso.md). O guia também explica os papéis `ECONOMICAL`, `HEAD_STRONG`,
-`EXECUTOR`, `JUDGE_*` e `MULTIMODAL`, com exemplos de bugs, planejamento, arquitetura e dívida
-técnica.
+Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
----
-
-
-### Regra crítica de execução por papel
-
-A documentação de papel/modelo é executável, não apenas informativa.
-
-Em `ROUTING_MODE=manual`, **toda transição entre papéis exige parada e troca manual de modelo antes da próxima skill**. O agente deve mostrar um `PHASE BANNER` com o estado canônico, skill, papel, modelo sugerido e ação do usuário.
-
-Exemplo:
+## Filosofia
 
 ```text
-STATE: RED_REVIEW
-SKILL: 07-testes-red.md
-ROLE: EXECUTOR
-MODEL_SUGGESTED: GPT-5.6 Luna Pro
-USER_ACTION: TROCAR PARA EXECUTOR E RESPONDER CONTINUAR RED
+ENTENDER MELHOR
+Discovery + evidência
+        ↓
+ANALISAR MELHOR
+Requirements + gaps + assumptions/open questions
+        ↓
+PROJETAR MELHOR
+Solution Design + arquitetura proporcional
+        ↓
+CONTRATO
+SPEC canônica
+        ↓
+EXECUTAR COM PROVA
+RED -> Code -> GREEN -> Judge
 ```
 
-O agente não pode executar `RED_REVIEW` usando `ECONOMICAL` só porque a conversa já estava nesse modelo.
-
-Os nomes canônicos dos estados também devem aparecer sem renomear/agrupar etapas. Isso evita divergência entre o que o orquestrador prescreve e o que a UI do agente comunica.
-
----
+A SPEC manda sobre implementação e testes. O executor não pode redefinir silenciosamente requisitos,
+RED ou decisões aprovadas para fazer a solução passar.
 
 ## Entrada única
 
-No VS Code/Cursor, iniciar referenciando o arquivo:
-
 ```text
 Leia e siga:
-"E:\Program Cursor\orquestrador\orquestrador\orquestrador.md"
+"<caminho>/orquestrador.md"
 ```
 
-O orquestrador:
+O orquestrador resolve `RESUME` ou `NEW`, seleciona fluxo, papel, skill, contexto permitido e gate.
+
+### Fluxos
 
 ```text
-resolve feature
--> RESUME ou NEW
--> confirma bindings de modelo da sessão
--> lê STATE
--> escolhe uma única skill
--> carrega somente o contexto permitido
--> executa a fase
--> respeita o gate fixo
--> salva NEXT_ACTION
--> faz handoff
+QUICK / AUTO-GO
+- mudança simples, localizada, inequívoca e de baixo risco
+- uma aprovação inicial
+- RED -> implementação -> GREEN automáticos até handoff para Judge
+
+COMUM / COMPLETA
+- discovery + análise de requisitos + design + SPEC/plano
+- gates completos existentes
 ```
 
-A troca automática real de modelo depende do runtime/cliente suportar dispatcher por modelo. Sem isso, o mesmo contrato funciona por handoff manual.
-
----
+`FAST | STANDARD | CRITICAL` alteram somente profundidade/rigor; não removem gates.
 
 ## Papéis de modelo
 
-- `HEAD_STRONG`
-- `EXECUTOR`
-- `ECONOMICAL`
-- `MULTIMODAL`
-- `JUDGE_PRIMARY`
-- `JUDGE_SECONDARY`
+- `ECONOMICAL`: Jira, busca, recon, memória, evidência, archive;
+- `HEAD_STRONG`: requisitos materiais, design, arquitetura, solução, planejamento e recovery;
+- `EXECUTOR`: RED, implementação, GREEN, QA e commit;
+- `JUDGE_PRIMARY`: julgamento independente em fresh context/read-only;
+- `JUDGE_SECONDARY`: reforço independente em risco alto;
+- `MULTIMODAL`: quando visual é essencial.
 
-Preset sugerido no bootstrap:
+Preset atual:
 
-- `HEAD_STRONG`: DeepSeek V4 Pro 0813
-- `EXECUTOR`: GPT-5.6 Luna Pro
-- `ECONOMICAL`: DeepSeek V4 Flash 0731
-- `MULTIMODAL`: Gemini 3.7 Flash
-- `JUDGE_PRIMARY`: DeepSeek V4 Pro em fresh context/read-only
+```text
+HEAD_STRONG     -> DeepSeek V4 Pro 0813
+EXECUTOR        -> GPT-5.6 Luna Pro
+ECONOMICAL      -> DeepSeek V4 Flash 0731
+MULTIMODAL      -> Gemini 3.7 Flash
+JUDGE_PRIMARY   -> DeepSeek V4 Pro fresh/read-only
+```
 
-Não usar `.ai/config/model-profile.md`. O binding papel → modelo pertence à sessão/runtime.
-
----
+O binding papel → modelo pertence à sessão/runtime. Não usar `.ai/config/model-profile.md`.
 
 ## Lazy loading
 
-Cada skill declara:
-
-```yaml
-context_loading: lazy
-reads:
-  - ...
-writes:
-  - ...
-forbidden_reads:
-  - ...
-forbidden_writes:
-  - ...
-```
-
-Durante uma fase, carregar apenas:
+Por fase carregar apenas:
 
 ```text
 orquestrador mínimo
 + STATE.md
 + skill atual
-+ referência condicional indicada pela skill atual
++ referência condicional explicitamente necessária
 + reads permitidos
-+ código/testes necessários
++ código/testes relevantes
 ```
 
-README, demais skills, todas as referências, cenários, templates, transcript e logs brutos não
-entram automaticamente.
-
----
-
-## RESUME
-
-Cada feature usa `.ai/features/<JIRA-ID>/STATE.md` com:
-
-```text
-LIFECYCLE
-CURRENT_STATE
-NEXT_ACTION
-SCENARIO
-```
-
-Pode existir mais de uma feature `ACTIVE|PAUSED`. Se `orquestrador.md` encontrar múltiplas candidatas sem Jira explícito, pergunta qual retomar.
-
-Etapas aprovadas não são refeitas sem motivo explícito.
-
-No fluxo `NEW`, `STATE.md` só é criado depois que o Jira for informado; o bootstrap anterior ao Jira permanece efêmero.
-
----
+Não carregar automaticamente README, todas as skills/referências, transcript, logs brutos ou features antigas completas.
 
 ## Memória por feature
 
 ```text
-.ai/
-  FEATURE_INDEX.md
-  features/
-    JIRA-1234/
-      STATE.md
-      00-jira.md
-      01-discovery.md
-      01-quality-review.md  # somente quando a revisão opcional ocorrer
-      02-solution.md
-      03-prd.md
-      04-implementation-plan.md
-      05-red-tests.md
-      red-tests.lock
-      06-implementation-summary.md
-      07-green-evidence.md
-      08-judgement.md
-      09-qa-tests.md
-      10-qa-guide.md
-      11-archive.md
-      qa/
-      delivery/
-        commit.md
-        pull-request.md
-        pr/
+.ai/features/JIRA-1234/
+  STATE.md
+  00-jira.md
+  01-discovery.md
+  01-requirements.md
+  01-quality-review.md  # opcional
+  02-design.md
+  02-solution.md
+  03-prd.md             # nome legado; conteúdo = SPEC canônica
+  04-implementation-plan.md
+  05-red-tests.md
+  red-tests.lock
+  06-implementation-summary.md
+  07-green-evidence.md
+  08-judgement.md
+  09-qa-tests.md
+  10-qa-guide.md
+  11-archive.md
+  recovery/
+  qa/
+  delivery/
 ```
 
-`11-archive.md` permanece estável por compatibilidade. Commit e PR foram movidos para `delivery/`, portanto novas etapas de entrega não renumeram a memória histórica.
+No QUICK, criar somente artefatos realmente usados. `.ai/` é sempre local e deve estar efetivamente
+ignorada pelo Git ao iniciar/reusar a memória e novamente antes de qualquer commit.
 
-Leitura retrocompatível aceita `13-archive.md`, `11-commit.md` e `12-pull-request.md` de versões transitórias, mas novas gravações usam a estrutura acima.
-
----
-
-## Fluxo
+## Fluxo COMUM
 
 ```text
 JIRA_ACCESS [ECONOMICAL]
 -> INTAKE [ECONOMICAL]
 -> MEMORY_LOOKUP [ECONOMICAL]
 -> DISCOVERY [ECONOMICAL]
--> HANDOFF para HEAD_STRONG quando necessário
--> INTERVIEW_OPTIONAL [HEAD_STRONG]
--> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se evidência ou solicitação exigir
+-> HANDOFF HEAD_STRONG
+-> REQUIREMENT_ANALYSIS [HEAD_STRONG]
+   -> INTERVIEW_OPTIONAL somente se OPEN_QUESTION bloqueante
+-> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente quando requerida
+-> SOLUTION_DESIGN [HEAD_STRONG]
 -> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
 -> PRD_PLAN_REVIEW [HEAD_STRONG] [APROVAR PRD/PLANO]
--> HANDOFF para EXECUTOR
+-> HANDOFF EXECUTOR
 -> RED_REVIEW [EXECUTOR] [APROVAR RED]
--> RED_EXECUTION [EXECUTOR] [criar/executar RED + lock]
+-> RED_EXECUTION [EXECUTOR] cria/executa RED + lock
 -> WAITING_GO [EXECUTOR] [GO]
 -> IMPLEMENTING [EXECUTOR]
 -> GREEN_VALIDATION [EXECUTOR]
--> HANDOFF para JUDGE_PRIMARY
+-> HANDOFF JUDGE_PRIMARY
 -> JUDGING [JUDGE_PRIMARY]
--> HANDOFF para EXECUTOR
 -> QA_REVIEW [EXECUTOR] [APROVAR QA]
--> COMMIT_REVIEW [EXECUTOR]
--> PR_DESCRIPTION [EXECUTOR] quando solicitado; somente título/descrição para input manual
+-> COMMIT_REVIEW [EXECUTOR] [AUTOMÁTICO | MANUAL | OUTROS]
+-> PR_DESCRIPTION quando solicitado
 -> READY_TO_ARCHIVE [ECONOMICAL]
 ```
 
-`FAST`, `STANDARD` e `CRITICAL` existem apenas como níveis de **profundidade**. Eles reutilizam a mesma esteira e os mesmos gates: nenhum nível remove, agrupa ou pula aprovações. `STANDARD` é o default; sinais de risco impedem redução automática para `FAST`.
+`Requirement Analysis`, `Solution Design` e `Technical Quality Review` não adicionam gates humanos.
+A única parada adicional possível é uma pergunta material que tornaria inseguro prosseguir por inferência.
 
----
+## Requirement Analysis
 
-## Níveis de profundidade
+`skills/04a-analise-requisitos.md` separa:
 
-- `FAST`: discovery/verificação mais curtos para mudança localizada e de baixo risco;
-- `STANDARD`: default para histórias e bugs comuns;
-- `CRITICAL`: investigação e julgamento mais profundos para produção, cross-repo, contratos, persistência, mensageria, concorrência, segurança e alto risco.
+```text
+EXPLICIT_REQUIREMENT
+IMPLICIT_NECESSITY
+ASSUMPTION
+OPEN_QUESTION
+TECHNICAL_RISK
+OPTIONAL_IMPROVEMENT
+```
 
-Os três níveis mantêm **Solução → PRD/Plano → RED → GO → GREEN → Judge → QA → Commit/Archive** com os mesmos gates.
+`OPEN_QUESTION` só bloqueia quando a resposta puder mudar materialmente comportamento, contrato, regra
+de negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
 
----
+## Solution Design
+
+`skills/04b-design-solucao.md` executa o Senior Approach Check: solução mais simples, padrão equivalente,
+acoplamento/abstração desnecessária, boundaries/contratos e efeitos colaterais. A regra é **seguir
+arquitetura válida existente e escolher a menor mudança suficiente**.
+
+`skills/18-qualidade-arquitetural.md` continua opcional e especializada.
+
+## SPEC + Plano
+
+`skills/06-prd-plano.md` mantém `03-prd.md` por compatibilidade, mas o conteúdo passa a ser a SPEC
+canônica. A matriz principal é:
+
+```text
+R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/diff -> teste/evidência
+```
+
+Delta material posterior retorna à fase responsável; executor não redefine a SPEC.
 
 ## RED / GREEN
 
-Testes RED devem incluir happy path e **edge cases aplicáveis** derivados de critérios, domínio, contratos e riscos.
+RED mantém `RED_REVIEW` e `RED_EXECUTION`. Todos os ACs precisam de evidência planejada; evidência pode
+ser unitária, integrada, estática, QA ou externa quando apropriado.
 
-A esteira separa explicitamente:
-
-```text
-RED_REVIEW    = desenhar/revisar o contrato + APROVAR RED
-RED_EXECUTION = criar os testes aprovados + comprovar RED + gerar lock
-```
-
-Isso evita que a UI diga "RED aprovado" enquanto ainda está criando ou executando testes.
-
-Após `RED_EXECUTION`, `red-tests.lock` sela os arquivos. GREEN/Rework não podem alterar RED para fabricar aprovação. `REOPEN RED` só pode ocorrer após recovery formal e autorização humana explícita com essa frase exata.
-
----
+GREEN usa gate mecânico com lock, compile, testes, regressão, failures/skips inesperados, evidência por
+AC e diff limpo dos testes lockados.
 
 ## Judge e recovery
 
-Judge:
+Judge executa fresh/read-only e avalia cada AC com **evidence-or-zero**. Sem evidência suficiente, não
+marca `PASS` por plausibilidade.
 
-- inicia em contexto novo;
-- recebe somente artefatos/evidências permitidos;
-- não recebe transcript/tentativas do executor;
-- não edita código ou testes;
-- classifica todo `FAIL` antes do roteamento.
-
-Classes:
+Todo `FAIL` é classificado como:
 
 ```text
 IMPLEMENTATION_DEFECT
@@ -268,53 +220,20 @@ DISCOVERY_GAP
 REQUIREMENT_AMBIGUITY
 ```
 
-`IMPLEMENTATION_DEFECT` vai para `REWORK_IMPLEMENTATION [EXECUTOR]`. As demais classes vão para `JUDGE_RECOVERY [HEAD_STRONG]`, executado por `skills/17-judge-recovery.md`. O recovery faz micro-investigação dirigida ao finding; não reinicia Discovery completo.
+Somente `IMPLEMENTATION_DEFECT` volta direto para rework; os demais passam por `17-judge-recovery.md`.
 
----
+## QUICK / AUTO-GO
 
-## QA
-
-QA permanece como na esteira anterior:
-
-- `09-qa-tests.md`;
-- collection Postman/Insomnia;
-- `10-qa-guide.md`;
-- DOCX em `qa/` quando o ambiente suportar;
-- gate obrigatório `APROVAR QA`.
-
----
+QUICK não materializa Requirements/Design/SPEC/Plan completos. Antes do Quick Contract executa versões
+compactas de Codebase Recon, Requirement Gap, Assumptions/Open Questions e Senior Solution Check. Se
+surgir blocker material ou decisão estrutural, migra para COMUM.
 
 ## Commit e PR
 
-- `skills/12-commit-workflow.md`: commit é empacotamento/rastreabilidade; preserva RED/GREEN/Judge, sempre faseia por intenção e oferece `AUTOMÁTICO`, `MANUAL` e `OUTROS`. AUTO executa grupos usando mensagem EN; MANUAL apresenta PT-BR + EN e aguarda aprovação/ajuste/outros. Registro: `delivery/commit.md`.
-- `skills/13-pull-request-workflow.md`: `ABRIR PR` significa somente gerar título + descrição final para preenchimento manual. A skill não acessa provider remoto, não faz push e não cria PR/MR. Registro: `delivery/pull-request.md`.
+- `12-commit-workflow.md`: commits faseados por intenção; `AUTOMÁTICO`, `MANUAL` ou `OUTROS`.
+- `13-pull-request-workflow.md`: gera somente título/descrição para preenchimento manual; não cria PR/MR remoto.
 
-Essas skills são lazy-loaded; o tamanho delas não entra no contexto normal da implementação.
-
----
-
-## Handoff
-
-`templates/handoff-packet.md` define o pacote compacto entre papéis/modelos. O handoff aponta para artefatos, em vez de copiar transcript ou contexto longo.
-
----
-
-## Métricas
-
-Quando disponíveis, acompanhar por card/fase/papel:
-
-- `COST_USD`;
-- `INPUT_TOKENS`;
-- `CACHE_READ_TOKENS`;
-- `OUTPUT_TOKENS`;
-- `CACHE_HIT_RATIO`;
-- `MODEL_ESCALATIONS`;
-- duração;
-- releituras/reinvestigação;
-- findings do Judge;
-- regressões.
-
-Defaults:
+## Orçamento
 
 ```text
 MONTHLY_BUDGET_USD=40
@@ -322,26 +241,5 @@ FEATURE_TARGET_USD=8
 FEATURE_WARNING_USD=10
 ```
 
----
-
-## Arquivos principais
-
-- `guia-de-uso.md`: entrada recomendada por cenário e explicação dos papéis de modelo;
-- `orquestrador.md`: core mínimo de estado/roteamento/gates/lazy loading;
-- `skills/`: execução detalhada por fase;
-- `skills/18-qualidade-arquitetural.md`: revisão opcional de qualidade, arquitetura e patterns;
-- `skills/cenarios/`: overlays on-demand sem alterar gates;
-- `templates/STATE.md`: memória operacional e RESUME;
-- `templates/handoff-packet.md`: troca compacta de agente/modelo.
-
-
-## Proteção da memória local `.ai/`
-
-A pasta `.ai/` é sempre local e nunca deve subir para o Git. Ao criar ou reutilizar a pasta, o orquestrador deve garantir que `.ai/` está no `.gitignore` e confirmar que o Git realmente a ignora. A mesma validação é repetida obrigatoriamente antes de qualquer commit.
-
-
-## Nomes canônicos de fase
-
-Checklists e mensagens de progresso devem usar exatamente os estados definidos em `orquestrador.md`. Descrições amigáveis podem complementar, mas não substituir o nome canônico.
-
-Isso é especialmente importante para que o usuário saiba quando precisa trocar de modelo em clientes sem roteamento automático.
+Economia deve vir de search-first, lazy loading, compactação, model routing e gates determinísticos —
+nunca de omitir requisito, teste ou validação material.

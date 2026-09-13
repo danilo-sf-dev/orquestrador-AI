@@ -11,6 +11,7 @@ reads:
   - source_code_relevant_only
   - tests_relevant_only
   - git_history_targeted_only
+  - project_documentation_relevant_only
 forbidden_reads:
   - chat_transcript
   - raw_build_logs_unless_relevant
@@ -25,7 +26,7 @@ forbidden_writes:
 # Skill — Investigação dirigida
 
 ## Objetivo
-Mapear fatos suficientes para decidir a solução com o menor contexto possível.
+Mapear fatos suficientes para a análise de requisitos e o design da solução com o menor contexto possível.
 
 ## Profundidade por `EXECUTION_LEVEL`
 
@@ -37,10 +38,30 @@ O nível vem de `STATE.md` e **não muda gates**:
 
 Mesmo em `CRITICAL`, continuar search-first e evitar leitura indiscriminada do workspace.
 
+## Codebase Recon — entry point first
+
+A investigação deve começar no ponto de entrada mais próximo do comportamento pedido/defeito e expandir
+somente quando a evidência exigir.
+
+Ordem preferencial:
+
+```text
+anchor do Jira
+-> entry point observável
+-> chamadas/dados diretamente relevantes
+-> boundary/contrato necessário
+-> testes relacionados
+-> dependências adjacentes somente se puderem mudar a decisão
+```
+
+Preferir busca textual/simbólica e leitura de trechos antes de abrir arquivos inteiros. Persistir
+`arquivo:símbolo/linha` em vez de copiar blocos de código para a memória. Não mapear o repositório inteiro
+"para entender melhor".
+
 ## Search-first
 Antes de ler arquivos inteiros:
 
-1. consultar memória relacionada;
+1. consultar memória relacionada selecionada;
 2. listar arquivos versionados quando necessário (`git ls-files` ou equivalente);
 3. buscar anchors com ferramenta textual/simbólica disponível (`rg`, IDE search etc.);
 4. localizar endpoint/classe/interface;
@@ -48,6 +69,22 @@ Antes de ler arquivos inteiros:
 6. aprofundar conforme a hipótese atual.
 
 Não inventar comandos: usar ferramentas disponíveis no ambiente.
+
+## Knowledge Verification Chain
+
+Para decisão técnica, usar esta ordem de confiança:
+
+```text
+1. código executável + testes atuais
+2. configuração/contratos ativos versionados
+3. padrões comprovados no projeto + documentação local relevante
+4. documentação oficial externa, somente quando necessária para comportamento de framework/API
+5. inferência explicitamente marcada
+```
+
+Não pesquisar documentação externa por padrão. Fazer isso somente quando uma decisão depender de
+comportamento não comprovável localmente. Se ainda não houver evidência suficiente, registrar `UNKNOWN`;
+nunca preencher a lacuna por plausibilidade.
 
 ## Exclusões padrão
 Não ler automaticamente, salvo se diretamente relevantes:
@@ -70,12 +107,13 @@ Git continua permitido de forma **pontual** (`log`, `show`, `diff`, `blame`) qua
 
 ## Ordem de investigação
 1. Começar pelas `ANCHORS` do Jira.
-2. Localizar endpoint/controller.
+2. Localizar o entry point mais próximo do comportamento.
 3. Seguir chamadas apenas do fluxo relevante.
-4. Identificar contratos externos e persistência.
+4. Identificar contratos externos e persistência somente quando tocados pelo fluxo.
 5. Encontrar testes existentes cedo.
 6. Identificar repos impactados.
-7. Registrar dúvidas que exigem decisão humana ou do Head.
+7. Registrar dúvidas/fatos necessários à análise de requisitos.
+8. Parar quando nova leitura não tiver capacidade real de mudar solução, risco ou escopo.
 
 ## Contrato de evidência
 
@@ -139,7 +177,10 @@ devem evoluir juntos, ou violação única de alto impacto em contrato, seguran�
 ou desempenho medido.
 
 Sinais como arquivo grande, método longo, muitos resultados no grep ou gosto arquitetural não bastam.
-Sem gatilho, marcar `TECHNICAL_QUALITY_REVIEW_STATUS=NOT_REQUIRED` e seguir para a próxima fase normal.
+Sem gatilho, marcar `TECHNICAL_QUALITY_REVIEW_STATUS=NOT_REQUIRED`.
+
+A revisão, quando necessária, ocorre depois de `REQUIREMENT_ANALYSIS` e antes de `SOLUTION_DESIGN`,
+para que o requisito esteja claro antes de discutir mudança estrutural.
 
 ## Heurística Java/Spring
 Pesquisar, conforme aplicável:
@@ -171,6 +212,7 @@ DEPLOY_COUPLING:
 
 ## Output `01-discovery.md`
 - mapa do fluxo atual;
+- entry point e cadeia relevante, sem inventário geral do projeto;
 - arquivos realmente relevantes;
 - evidências classificadas como `FACT`, `INFERENCE` ou `UNKNOWN`;
 - hipóteses consideradas e seu estado, somente quando o protocolo for necessário;
@@ -181,8 +223,21 @@ DEPLOY_COUPLING:
 - divergências com Jira;
 - riscos observados;
 - `DECISION_REQUIRED`;
-- `UNKNOWN`.
+- `UNKNOWN`;
 - se a revisão opcional foi requerida e por qual evidência.
+
+## Handoff
+
+No `STANDARD_GATED`, ao concluir:
+
+```yaml
+CURRENT_STATE: REQUIREMENT_ANALYSIS
+NEXT_ACTION: ANALYZE_REQUIREMENTS
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+No `QUICK_AUTOGO`, esta skill não é materializada; `16-quick-autogo.md` usa uma versão compacta das
+mesmas regras de recon.
 
 ## Regra de eficiência
 Não persistir `cat/grep/log` bruto. Compactar evidências e apontar caminho/símbolo/linha quando possível. Tentativas sem valor não viram memória permanente.

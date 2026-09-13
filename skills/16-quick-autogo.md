@@ -6,13 +6,11 @@ description: >
   interrupções até o handoff para Judge.
 model_role: EXECUTOR
 context_loading: lazy
-
 reads:
   - STATE.md
   - 00-jira.md
   - source_code_relevant
   - related_tests
-
 writes:
   - STATE.md
   - 05-red-tests.md
@@ -20,12 +18,10 @@ writes:
   - source_code
   - 06-implementation-summary.md
   - 07-green-evidence.md
-
 forbidden_reads:
   - full_chat_transcript
   - unrelated_features
   - unrelated_repository_files
-
 forbidden_writes:
   - jira_credentials
   - approved_requirements
@@ -34,66 +30,73 @@ forbidden_writes:
 
 # QUICK / AUTO-GO
 
-## 1. Objetivo
+## Objetivo
+Executar tarefas simples com poucas interações sem remover entendimento correto, análise mínima de
+requisitos, escolha técnica consciente, TDD, RED lock, GREEN e Judge independente.
 
-Executar tarefas simples com poucas interações humanas sem remover:
-- entendimento correto do Jira;
-- TDD com RED;
-- proteção por lock;
-- GREEN;
-- Judge independente.
+QUICK reduz cerimônia, não qualidade. Não criar Discovery/Requirements/Design/SPEC/Plan completos apenas
+para preencher estrutura.
 
-QUICK reduz cerimônia, não qualidade.
-
----
-
-## 2. Pré-condições
+## Pré-condições
 
 ```yaml
 FLOW_MODE: QUICK_AUTOGO
 JIRA_CONTEXT_READY: true
 ```
 
-Antes de modificar código, validar elegibilidade.
+O Quick Contract e `AUTO-GO -> RED -> implementação -> GREEN` exigem `EXECUTOR`. Em routing manual,
+fazer handoff antes do Quick Contract.
 
----
+## Elegibilidade
+QUICK é adequado quando a mudança é localizada, de baixo risco, comportamento inequívoco, normalmente
+single-repo, objetivamente testável e sem decisão arquitetural relevante.
 
+Abortar para `STANDARD_GATED` se houver banco/migração, mensageria, segurança, concorrência, contrato
+material entre serviços, cross-repo inesperado, regra de negócio ambígua ou decisão estrutural.
 
-## 2.1 Papel/modelo no QUICK
-
-`JIRA_ACCESS` pode ser executado por `ECONOMICAL`, mas o Quick Contract e toda a sequência `AUTO-GO -> RED -> implementação -> GREEN` exigem `EXECUTOR`.
-
-Em `ROUTING_MODE=manual`, antes do Quick Contract:
+## Compact Requirement Analysis
+Antes do Quick Contract, verificar somente dimensões aplicáveis:
 
 ```text
-MODEL_HANDOFF_REQUIRED=true
-NEXT_MODEL_ROLE=EXECUTOR
+validation/null/invalid
+error behavior
+contract compatibility
+external dependency failure
+data/state branches
+idempotency/concurrency quando houver sinal
 ```
 
-Mostrar PHASE BANNER e parar até o usuário trocar o modelo e confirmar. Não iniciar Quick Contract com `ECONOMICAL`.
+Classificar pontos materiais como:
 
-## 3. Elegibilidade
+```text
+EXPLICIT | IMPLICIT_NECESSITY | ASSUMPTION | OPEN_QUESTION | RISK | OPTIONAL
+```
 
-QUICK é adequado quando a alteração é:
-- localizada;
-- de baixo risco;
-- comportamento inequívoco;
-- normalmente single-repo;
-- testável objetivamente;
-- sem decisão arquitetural relevante;
-- sem banco/migração;
-- sem mensageria;
-- sem segurança;
-- sem concorrência;
-- sem mudança material de contrato entre serviços.
+Se existir `OPEN_QUESTION` capaz de mudar comportamento, contrato, regra de negócio, segurança,
+persistência, integração ou desenho do RED:
 
-Número de arquivos é apenas sinal, não regra rígida.
+```text
+QUICK_AUTOGO_ABORTED
+RECOMMENDED_FLOW=STANDARD_GATED
+REASON=BLOCKING_OPEN_QUESTION
+```
 
----
+Não usar QUICK para inferir e corrigir depois.
 
-## 4. Quick Contract — primeira interação
+## Compact Senior Solution Check
+Antes do Quick Contract, verificar:
 
-Após Jira + leitura mínima do código, apresentar:
+1. existe abordagem significativamente mais simples?
+2. existe padrão equivalente já usado no projeto?
+3. a mudança cria acoplamento/camada/abstração desnecessária?
+4. cruza boundary/contrato que torne a tarefa não simples?
+5. há efeito colateral previsível em outro fluxo?
+
+Se houver trade-off material ou necessidade de revisão estrutural, migrar para `STANDARD_GATED`.
+Melhoria estética/sintática não bloqueia e não amplia escopo.
+
+## Quick Contract — única aprovação inicial
+Apresentar:
 
 ```text
 QUICK CONTRACT — <JIRA>
@@ -101,19 +104,19 @@ QUICK CONTRACT — <JIRA>
 Entendimento:
 - ...
 
+Requisitos/assumptions relevantes:
+- ...
+
 Escopo provável:
 - ...
 
-Comportamento/origem esperada:
+Abordagem escolhida:
 - ...
 
 RED planejado:
 1. ...
 2. ...
 3. edge cases aplicáveis ...
-
-Sinais de elegibilidade:
-- ...
 
 Riscos/gatilhos de escalonamento:
 - ...
@@ -123,80 +126,53 @@ RED -> comprovação RED -> lock -> implementação -> GREEN -> rework técnico
 sem novas perguntas até o handoff para Judge.
 ```
 
-Aguardar:
+Aguardar exatamente:
 
 ```text
 AUTO-GO
 ```
 
-Sem `AUTO-GO`, não modificar código de produção.
+Sem `AUTO-GO`, não modificar código/testes do repositório.
 
----
-
-## 5. Execução automática após AUTO-GO
+## Execução automática
+Após aprovação:
 
 ```text
 criar RED
--> executar e comprovar RED
+-> executar e comprovar falha pelo motivo esperado
 -> registrar 05-red-tests.md
 -> gerar red-tests.lock
--> implementar somente o escopo aprovado
+-> implementar somente o contrato aprovado
 -> executar GREEN
--> corrigir implementação quando necessário
+-> corrigir somente implementação quando necessário
 -> repetir GREEN até PASS ou bloqueio real
 ```
 
-Não pedir autorização intermediária para teste, implementação, build ou correção dentro do escopo aprovado.
+Cada teste precisa estar ligado a comportamento/requisito explícito do Quick Contract. Cobrir happy
+path e edge cases aplicáveis; não criar caso artificial.
 
----
+`UNEXPECTED_PASS` ou falha por motivo incorreto não contam como RED comprovado. Após lock, testes
+protegidos não podem ser alterados silenciosamente.
 
-## 6. RED
-
-Cobrir quando aplicável:
-- happy path;
-- null/ausência/optional;
-- vazio;
-- boundary;
-- mapping/serialization;
-- erro de dependência;
-- branch relevante;
-- regressão adjacente.
-
-Estados:
+## GREEN mecânico
+GREEN exige:
 
 ```text
-COVERED
-NOT_APPLICABLE
-DEFERRED_WITH_REASON
+RED_LOCK=VALID
+COMPILE=PASS|N/A_WITH_REASON
+RED_TESTS=PASS
+RELATED_REGRESSION=PASS|N/A_WITH_REASON
+UNEXPECTED_FAILURES=0
+UNEXPECTED_SKIPPED=0
+LOCKED_TEST_DIFF=CLEAN
 ```
 
-Após lock, testes protegidos não podem ser alterados silenciosamente.
+Persistir evidência real em `07-green-evidence.md`. Não inventar contagens não reportadas.
 
-Se o RED estiver conceitualmente errado:
-
-```text
-QUICK_AUTOGO_ABORTED
-REASON=REOPEN_RED_REQUIRED
-```
-
----
-
-## 7. Escalonamento obrigatório
-
-Abortar QUICK quando surgir:
-- segundo repositório inesperado;
-- contrato entre serviços;
-- banco/migração;
-- mensageria;
-- segurança;
-- concorrência;
-- arquitetura;
-- regra de negócio ambígua;
-- requisito conflitante;
-- necessidade de reinterpretar o Jira;
-- RED impossível de definir sem decisão humana.
-
-Saída:
+## Escalonamento durante execução
+Abortar QUICK se surgir segundo repositório, mudança de contrato material, banco/migração, mensageria,
+segurança, concorrência, arquitetura, requisito conflitante, necessidade de reinterpretar Jira ou RED
+impossível de definir sem decisão humana.
 
 ```text
 QUICK_AUTOGO_ABORTED
@@ -204,141 +180,39 @@ RECOMMENDED_FLOW=STANDARD_GATED
 REASON=<motivo>
 ```
 
-Nunca converter silenciosamente uma tarefa QUICK em implementação complexa.
+Nunca converter silenciosamente QUICK em implementação complexa.
 
----
-
-## 8. GREEN
-
-GREEN exige:
-- RED agora verde;
-- testes relevantes existentes verdes;
-- build/compile aplicável;
-- lock íntegro;
-- nenhuma alteração fora do escopo sem justificativa.
-
-Persistir em:
-
-```text
-07-green-evidence.md
-```
-
----
-
-## 9. Handoff para Judge — segunda interação
-
+## Handoff para Judge
 Quando GREEN estiver válido:
 
 ```text
 QUICK_READY_FOR_JUDGE
-
 GREEN: PASS
 RED_LOCK: VALID
-
-PRÓXIMA ETAPA: JUDGE
-PAPEL RECOMENDADO: JUDGE_PRIMARY
-
-Se o runtime não troca modelo automaticamente:
-troque manualmente o modelo no chat e responda:
-
-CONTINUAR JUDGE
+NEXT_MODEL_ROLE: JUDGE_PRIMARY
 ```
 
-Gerar handoff via `templates/handoff-packet.md`.
+O Judge recebe somente Jira, Quick Contract aprovado, RED spec/lock, diff relevante e GREEN evidence.
+Não fornecer transcript nem histórico de tentativas. No QUICK, o Quick Contract é o contrato aprovado;
+não exigir artefatos exclusivos do fluxo STANDARD.
 
-O Judge recebe apenas:
-- `00-jira.md`;
-- Quick Contract/decisões aprovadas;
-- `05-red-tests.md`;
-- `red-tests.lock`;
-- diff/código final relevante;
-- `07-green-evidence.md`.
+## Judge FAIL
+Usar a classificação da skill 10:
 
-Não fornecer transcript completo nem histórico de tentativas do executor.
+- `IMPLEMENTATION_DEFECT`: `REWORK_IMPLEMENTATION -> GREEN_VALIDATION -> JUDGING fresh`, sem tocar RED.
+- `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`: abortar QUICK e migrar para
+  `JUDGE_RECOVERY [HEAD_STRONG]`.
 
-Executar `skills/10-juiz.md`.
+Não reabrir RED dentro do QUICK sem recovery formal.
 
----
+## QA e delivery
+Após Judge PASS, perguntar se QA/documentação é necessário. Se sim, executar skill 11; se não,
+registrar justificativa.
 
-## 10. Judge FAIL
+Depois seguir `COMMIT_REVIEW`. Commit mantém modos `AUTOMÁTICO | MANUAL | OUTROS`; PR continua on-demand
+e apenas gera descrição para input manual; archive segue skill 14.
 
-Usar obrigatoriamente a classificação produzida por `skills/10-juiz.md`:
-
-```text
-IMPLEMENTATION_DEFECT
-RED_CONTRACT_DEFECT
-DISCOVERY_GAP
-REQUIREMENT_AMBIGUITY
-```
-
-### `IMPLEMENTATION_DEFECT`
-
-O QUICK pode continuar:
-
-```text
-REWORK_IMPLEMENTATION [EXECUTOR]
--> GREEN_VALIDATION
--> JUDGING fresh
-```
-
-RED e lock permanecem intocáveis.
-
-### Demais classes
-
-Se `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`:
-
-```text
-QUICK_AUTOGO_ABORTED
-RECOMMENDED_FLOW=STANDARD_GATED
-NEXT_STATE=JUDGE_RECOVERY
-NEXT_MODEL_ROLE=HEAD_STRONG
-```
-
-Não improvisar reabertura de RED dentro do QUICK. O finding passa para `skills/17-judge-recovery.md`, com investigação direcionada e novo gate somente se `REOPEN RED` for realmente necessário.
-
----
-
-## 11. QA — terceira interação
-
-Após Judge `PASS`:
-
-```text
-Esta tarefa precisa de QA/documentação?
-
-1. SIM — executar QA
-2. NÃO — registrar justificativa e seguir
-```
-
-Estados:
-
-```text
-QA_REQUIRED
-QA_NOT_REQUIRED_WITH_REASON
-```
-
-Se SIM, recomendar papel/modelo e executar `skills/11-qa-pack.md`.
-Se NÃO, registrar justificativa curta.
-
----
-
-## 12. Delivery
-
-Depois do QA:
-
-```text
--> COMMIT_REVIEW
-```
-
-Commit segue `skills/12-commit-workflow.md`: ao entrar em `COMMIT_REVIEW`, oferecer `AUTOMÁTICO`, `MANUAL` e `OUTROS`. `AUTOMÁTICO` autoriza a execução faseada; `MANUAL` apresenta o plano e aguarda `POSSO COMITAR`, `PRECISA AJUSTAR` ou `OUTROS`.
-
-PR continua on-demand; `PR_STATUS=NOT_REQUESTED` é válido.
-
-Archive segue `skills/14-arquivamento.md`.
-
----
-
-## 13. Artefatos QUICK
-
+## Artefatos QUICK
 Criar somente:
 
 ```text
@@ -354,5 +228,3 @@ red-tests.lock
 11-archive.md
 delivery/
 ```
-
-Não criar Discovery/Solution/PRD/Plan apenas para preencher estrutura.

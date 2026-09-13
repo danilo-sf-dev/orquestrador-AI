@@ -8,6 +8,8 @@ reads:
   - STATE.md
   - 00-jira.md
   - 01-discovery.md
+  - 01-requirements.md
+  - 02-design.md
   - 02-solution.md
   - approved_human_decisions
 forbidden_reads:
@@ -19,24 +21,69 @@ forbidden_writes:
   - tests
 ---
 
-# Skill — PRD + plano de implementação
+# Skill — SPEC canônica + plano de implementação
 
-## Pré-condição
-`SOLUTION_APPROVED=true`.
+> O nome físico `03-prd.md` é mantido por compatibilidade. Semanticamente, o arquivo passa a ser a
+> **SPEC canônica** da feature: o contrato vivo que RED, implementação, GREEN e Judge devem seguir.
 
-## Mini-PRD
-Deve conter:
-- objetivo;
-- escopo;
-- fora de escopo;
-- comportamento atual/desejado;
-- critérios de aceite normalizados;
-- API/contratos;
-- erros/status esperados;
-- integrações;
-- riscos;
-- observabilidade relevante;
-- matriz de rastreabilidade AC -> comportamento -> evidência.
+## Pré-condições
+
+```yaml
+SOLUTION_APPROVED: true
+REQUIREMENT_ANALYSIS_STATUS: COMPLETE
+BLOCKING_OPEN_QUESTIONS: 0
+```
+
+## Princípio da SPEC
+
+A SPEC descreve comportamento observável e decisões aprovadas. Ela não é um resumo narrativo do chat
+nem um documento de produto genérico.
+
+```text
+Jira + evidence + human decisions
+            ↓
+          SPEC
+      /     |      \
+    RED   PLAN    JUDGE
+```
+
+Nenhuma fase posterior pode redefinir silenciosamente requisito, assumption material ou decisão de
+design. Delta material volta à fase responsável.
+
+## Estrutura obrigatória de `03-prd.md`
+
+```text
+SPEC_ID: <JIRA>
+OBJECTIVE:
+SCOPE:
+OUT_OF_SCOPE:
+
+OBSERVABLE_BEHAVIOR:
+
+AC-01:
+SOURCE: <Jira/R-/human decision>
+GIVEN:
+WHEN:
+THEN:
+ERRORS_OR_EDGE_BEHAVIOR:
+
+CONSTRAINTS:
+ASSUMPTIONS_ACCEPTED:
+OPEN_QUESTIONS: []
+CONTRACTS:
+NON_FUNCTIONAL_REQUIREMENTS:
+DESIGN_DECISIONS: [DD-...]
+RISKS_AND_VALIDATION:
+RELATED_FEATURES:
+```
+
+Cada AC precisa de origem. Não criar AC para `OPTIONAL_IMPROVEMENT` não aprovado.
+
+## Normalização de critérios
+
+Transformar requisitos `R-*` em critérios testáveis/observáveis sem alterar significado. Quando um
+requisito não for demonstrável por teste unitário, declarar a evidência esperada (`integration`,
+`config`, `static verification`, `QA`, `external validation`).
 
 Antes de concluir, verificar somente lacunas aplicáveis ao tipo de mudança:
 
@@ -47,8 +94,8 @@ Antes de concluir, verificar somente lacunas aplicáveis ao tipo de mudança:
 - dados existentes e migração para mudanças persistentes;
 - compatibilidade para contratos consumidos por outros repos.
 
-Não perguntar sobre convenções já comprovadas no projeto. Lacuna que não muda implementação ou
-aceite deve ser registrada como risco, não usada para prolongar a entrevista.
+Se aparecer nova `OPEN_QUESTION` material, **não decidir aqui**: voltar para `REQUIREMENT_ANALYSIS` com
+o delta. Lacuna que não muda implementação ou aceite deve ser risco/limitação, não pergunta infinita.
 
 ## Plano
 Deve conter:
@@ -59,18 +106,19 @@ Deve conter:
 - migrações/configs, se houver;
 - estratégia de backward compatibility;
 - testes unitários necessários, incluindo happy path e edge cases aplicáveis;
-- matriz inicial de edge cases/riscos a transformar em testes (ex.: boundaries, ausência/null, vazio, inválidos, erros de dependência, estados/branches, duplicidade/idempotência), marcando somente os que fazem sentido para a história;
+- matriz inicial de edge cases/riscos a transformar em testes;
 - testes integrados/QA necessários;
 - ordem de deploy quando cross-repo;
 - rollback/mitigação quando relevante.
 
-Organizar o trabalho em unidades implementáveis. Cada unidade deve declarar:
+Organizar o trabalho em unidades implementáveis:
 
 ```text
 PLAN_ID: PLAN-<N>
 OUTCOME: <resultado observável, não atividade genérica>
 DEPENDS_ON: []
 AC_LINKS: []
+REQUIREMENT_LINKS: []
 DESIGN_DECISIONS: []
 FILES_CONFIRMED: []
 FILES_EXPECTED: []
@@ -79,38 +127,48 @@ VERIFICATION:
 RISK: LOW | MEDIUM | HIGH
 ```
 
-As dependências devem formar uma ordem executável, sem ciclos. Não criar unidade "investigar" sem
-uma decisão ou artefato verificável como saída. Arquivos descobertos no código entram como
-`FILES_CONFIRMED`; caminhos ainda não existentes ou inferidos ficam em `FILES_EXPECTED`.
+As dependências devem formar ordem executável, sem ciclos. Não criar unidade "investigar" sem decisão
+ou artefato verificável como saída. Arquivos descobertos entram como `FILES_CONFIRMED`; caminhos ainda
+não existentes/inferidos ficam em `FILES_EXPECTED`.
 
-## Rastreabilidade e impacto
+## Rastreabilidade bidirecional
 
-Construir uma matriz compacta:
+Construir matriz compacta:
 
 ```text
-AC/JIRA -> DD -> PLAN_ID -> arquivo/componente -> teste/evidência
+R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/componente -> teste/evidência
 ```
 
 Validar nos dois sentidos:
 
-- todo critério e decisão relevante possui unidade de plano e verificação;
-- toda unidade, arquivo esperado e teste planejado tem justificativa em critério, risco ou decisão;
+- todo requisito/AC/decisão material possui unidade de plano e verificação;
+- toda unidade, arquivo esperado e teste planejado tem origem em requisito, AC, risco ou decisão;
 - alteração de contrato inclui consumidores, compatibilidade e ordem cross-repo;
-- risco material inclui mitigação, rollback ou validação correspondente.
+- risco material inclui mitigação, rollback ou validação;
+- item sem origem justificável sai do plano ou fica como melhoria opcional fora de escopo.
 
-Itens sem origem justificável devem sair do plano ou ser apresentados explicitamente como melhoria
-opcional fora de escopo.
+## SPEC freeze
 
-## Regra
-Plano descreve intenção; não deve fingir que caminhos/classes inexistentes foram confirmados. Diferenciar `CONFIRMED` de `EXPECTED`.
-
-O plano não redefine a solução. Se a decomposição revelar uma decisão arquitetural nova ou invalidar
-uma `DD-*` aprovada, voltar para `SOLUTION_REVIEW` com o delta, em vez de decidir silenciosamente.
+Ao aprovar, a versão de `03-prd.md` vira contrato para RED. Mudança material posterior exige delta
+explícito e roteamento à fase responsável; executor não pode alterar SPEC para acomodar implementação.
 
 ## Gate
 Parar e solicitar `APROVAR PRD/PLANO`.
 
+> O texto do gate é preservado por compatibilidade de UX; o que está sendo aprovado é a **SPEC canônica
+> + plano**.
+
+Após aprovação:
+
+```yaml
+PRD_PLAN_APPROVED: true
+SPEC_STATUS: APPROVED
+CURRENT_STATE: RED_REVIEW
+NEXT_ACTION: DESIGN_RED
+```
 
 ## Relação com memória anterior
 
-Quando a história altera comportamento já documentado em outra feature, registrar a relação como `EXTENDS`, `OVERRIDES`, `DEPRECATES` ou `RELATED`. Isso serve para busca futura e delta analysis; não duplicar documentos antigos.
+Quando a história altera comportamento já documentado em outra feature, registrar `EXTENDS`,
+`OVERRIDES`, `DEPRECATES` ou `RELATED`. A relação serve para busca/delta analysis; comportamento atual é
+definido pela SPEC mais nova aprovada, sem duplicar documentos antigos.

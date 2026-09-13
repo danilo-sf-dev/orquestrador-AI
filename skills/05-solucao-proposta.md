@@ -8,6 +8,8 @@ reads:
   - STATE.md
   - 00-jira.md
   - 01-discovery.md
+  - 01-requirements.md
+  - 02-design.md
   - 01-quality-review.md # somente quando presente
   - related_feature_memory_selected_only
   - approved_human_decisions
@@ -23,63 +25,75 @@ forbidden_writes:
 # Skill — Solução proposta
 
 ## Objetivo
-Transformar fatos da investigação em uma solução mínima, coerente com o Jira e com a arquitetura atual.
+
+Revisar e consolidar o design técnico em uma solução mínima, coerente com o Jira, com o contrato de
+requisitos e com a arquitetura atual, apresentando ao usuário somente decisões materiais para o gate
+`APROVAR SOLUÇÃO`.
+
+A análise técnica detalhada ocorre em `04b-design-solucao.md`; esta skill não deve refazer o design do
+zero nem ampliar escopo por preferência arquitetural.
+
+## Pré-condições
+
+```yaml
+REQUIREMENT_ANALYSIS_STATUS: COMPLETE
+SOLUTION_DESIGN_STATUS: COMPLETE
+BLOCKING_OPEN_QUESTIONS: 0
+```
+
+Se qualquer condição falhar, não pedir aprovação de solução.
 
 ## Inputs
 - `00-jira.md`;
-- memórias relevantes revalidadas;
 - `01-discovery.md`;
-- respostas de entrevista, se houver.
+- `01-requirements.md`;
+- `02-design.md`;
+- memórias relevantes revalidadas;
+- respostas humanas já aprovadas;
 - `01-quality-review.md`, somente quando a revisão opcional tiver sido ativada.
 
 ## Entrada opcional de qualidade arquitetural
 
-Uma recomendação `TQ-*` não é uma decisão aprovada nem obrigação de implementação. Considerá-la
-somente se resolver o requisito atual ou um risco técnico material que a solução local preservaria.
-Revalidar aderência às convenções do projeto, custo de migração, compatibilidade e alternativa mais
-simples antes de promovê-la a `DD-*`.
+Uma recomendação `TQ-*` não é uma decisão aprovada nem obrigação de implementação. Ela só pode entrar
+na solução se resolver requisito atual ou risco técnico material reconhecido no design.
 
 Não introduzir pattern, camada ou arquitetura apenas porque a revisão os listou. `NO_CHANGE` e
 `LOCAL_REFACTOR` são resultados válidos. Se uma recomendação for selecionada, registrar seu `TQ-*`
 como evidência no `DD-*`; se for rejeitada, resumir o motivo quando isso evitar reabertura da decisão.
 
-## Produzir
+## Validar antes do gate
+
+1. todo requisito `R-*` relevante está atendido pela abordagem proposta ou explicitamente fora do escopo;
+2. nenhuma `OPEN_QUESTION BLOCKING=YES` permanece;
+3. assumptions com impacto alto estão visíveis e possuem evidência/mitigação;
+4. `OPTIONAL_IMPROVEMENT` não entrou silenciosamente no escopo;
+5. boundaries, contratos e consumidores materiais estão explícitos;
+6. a solução não contradiz fatos do discovery nem decisões humanas aprovadas;
+7. alternativa significativamente melhor encontrada pelo Senior Approach Check foi tratada;
+8. a mudança proposta é a menor capaz de satisfazer o contrato.
+
+## Produzir `02-solution.md`
+
 1. entendimento do problema/feature;
-2. comportamento atual;
-3. comportamento desejado;
-4. gap;
-5. solução recomendada;
-6. impacto por repo;
-7. contratos alterados ou preservados;
-8. riscos/regressões;
-9. alternativas descartadas;
-10. itens fora de escopo;
-11. questões ainda abertas.
+2. comportamento atual e desejado;
+3. requisitos `R-*` cobertos;
+4. solução recomendada;
+5. impacto por repo;
+6. contratos alterados ou preservados;
+7. boundaries afetados;
+8. riscos/regressões e mitigação;
+9. assumptions materiais aceitas;
+10. alternativas materiais descartadas;
+11. itens fora de escopo e melhorias opcionais não selecionadas.
 
 ## Decisão arquitetural proporcional
 
-Não transformar toda alteração em exercício de arquitetura. Aplicar análise formal quando houver
-decisão material sobre contrato público, persistência/migração, transação, concorrência, segurança,
-integração, compatibilidade cross-repo, dependência nova ou mudança difícil de reverter.
-
-Para cada decisão material:
-
-1. declarar problema, restrições e requisitos não funcionais relevantes;
-2. priorizar padrões já confirmados no discovery;
-3. comparar somente opções realmente viáveis;
-4. avaliar aderência ao requisito, complexidade, manutenção, segurança, desempenho, risco e
-   reversibilidade;
-5. recomendar a opção de menor complexidade que satisfaça as restrições;
-6. explicitar trade-offs aceitos e como validar a decisão.
-
-Se houver apenas uma solução razoável, registrar uma recomendação direta. Apresentar duas ou três
-opções ao usuário somente quando as consequências forem materialmente diferentes e a escolha não
-puder ser inferida das decisões já aprovadas.
-
-Registrar decisões importantes em formato ADR-lite dentro de `02-solution.md`:
+Promover decisões materiais do design para ADR-lite:
 
 ```text
 DECISION_ID: DD-<N>
+SOURCE_DESIGN: SD-<N>
+REQUIREMENTS: [R-...]
 CONTEXT:
 CONSTRAINTS:
 SELECTED_OPTION:
@@ -90,24 +104,34 @@ VALIDATION:
 CONFIDENCE: HIGH | MEDIUM | LOW
 ```
 
-Não escolher um padrão apenas pelo nome nem introduzir abstração, serviço ou camada sem problema
-concreto. Quando a arquitetura atual for suficiente, a decisão correta é preservá-la.
-
-Promover para `02-solution.md` somente os padrões do discovery que condicionam a solução. Os demais
-permanecem fora do contexto de planejamento, implementação e Judge.
+Não criar `DD-*` para detalhe sintático ou escolha trivial. Quando a arquitetura atual for suficiente,
+a decisão correta é preservá-la.
 
 ## Não fazer
 - não editar código;
 - não criar testes ainda;
-- não escrever plano detalhado antes da aprovação da solução.
+- não escrever plano detalhado antes da aprovação da solução;
+- não inventar requisito para "melhorar" o sistema;
+- não reabrir discovery sem evidência de fato novo.
 
 ## Gate
 Parar e solicitar `APROVAR SOLUÇÃO`.
 
-Ao apresentar o gate, destacar decisões `DD-*`, trade-offs e incertezas que o usuário está
-aprovando. Alternativas descartadas sem consequência material podem permanecer resumidas.
+Ao apresentar o gate, mostrar de forma compacta:
+
+```text
+REQUIREMENTS_COVERED: <N>/<N>
+BLOCKING_OPEN_QUESTIONS: 0
+DESIGN: <resumo>
+MATERIAL_DECISIONS: <DD-* ou NONE>
+RISKS_ACCEPTED: <resumo>
+OUT_OF_SCOPE: <resumo>
+```
 
 Somente após aprovação marcar:
-```text
-SOLUTION_APPROVED=true
+
+```yaml
+SOLUTION_APPROVED: true
+CURRENT_STATE: PRD_PLAN_REVIEW
+NEXT_ACTION: BUILD_SPEC_AND_PLAN
 ```
