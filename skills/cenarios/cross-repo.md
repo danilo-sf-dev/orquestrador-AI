@@ -21,7 +21,7 @@ Uma história/bug altera ou depende de dois ou mais repositórios que se chamam 
 Criar uma única pasta canônica `.ai/features/<JIRA-ID>/`. Nos demais repos, criar `FEATURE-LINK.md` apontando para ela.
 
 ## Contrato obrigatório
-No `STATE.md` e PRD:
+No `STATE.md` e SPEC:
 
 ```text
 SOURCE_REPO:
@@ -54,7 +54,6 @@ Aplicar `skills/12-commit-workflow.md`. Validar todos os repos antes do primeiro
 
 ## Archive
 Indexar a feature em cada repo por ponteiro e na memória canônica por endpoints/contratos/classes de ambos.
-
 
 ## Regra de testes unitários
 Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras, contratos ou riscos.
