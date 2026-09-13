@@ -1,6 +1,6 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.9.0  
+**Versão:** 1.9.1  
 **Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**; cada skill define como executar sua fase.
 
 ## 1. Princípio central
@@ -18,33 +18,34 @@ Não duplicar aqui regras detalhadas das skills.
 2. Binding papel → modelo pertence à sessão/runtime; não persistir `model-profile.md`.
 3. `STATE.md` é checkpoint curto; detalhes ficam nos artefatos da feature.
 4. Lazy loading: carregar somente core + STATE + skill atual + reads/referências explicitamente necessárias.
-5. Transcript, logs brutos e features antigas completas não entram automaticamente no contexto.
-6. Fluxo comum é contract-driven: `Jira -> Discovery -> Requirements -> Design -> Solution -> SPEC -> RED -> Code -> GREEN -> Judge`.
-7. `03-prd.md` mantém o nome físico por compatibilidade, mas semanticamente é a **SPEC canônica** aprovada.
-8. Requirement Analysis separa `EXPLICIT_REQUIREMENT`, `IMPLICIT_NECESSITY`, `ASSUMPTION`, `OPEN_QUESTION`, `TECHNICAL_RISK`, `OPTIONAL_IMPROVEMENT`.
-9. `OPEN_QUESTION` bloqueia somente quando a resposta muda materialmente comportamento, contrato, negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
-10. Solution Design segue arquitetura válida existente por padrão, prefere a menor mudança suficiente e só propõe mudança estrutural com ganho material demonstrável.
-11. Revisão arquitetural (`18`) continua opcional e especializada; não é checklist obrigatório.
-12. `OPTIONAL_IMPROVEMENT` nunca vira escopo, RED ou obrigação do Judge sem aprovação explícita.
-13. Planejamento e julgamento usam `R/Jira -> AC -> DD -> PLAN -> arquivo/diff -> teste/evidência`.
-14. RED aprovado fica protegido por `red-tests.lock`; implementação/GREEN não podem alterá-lo.
-15. GREEN usa evidência mecânica; código presente ou teste verde sem rastreabilidade não prova AC.
-16. Judge é fresh-context/read-only e usa `evidence-or-zero`: sem evidência suficiente não há `PASS`.
-17. Mudança no escopo julgado invalida o julgamento e exige novo GREEN + Judge.
-18. Judge FAIL deve ser classificado como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
-19. `IMPLEMENTATION_DEFECT` volta apenas para rework; demais classes passam por `JUDGE_RECOVERY`.
-20. `REOPEN RED` exige recovery + autorização humana exata `REOPEN RED`.
-21. `RED_REVIEW` e `RED_EXECUTION` são estados distintos.
-22. Conclusões materiais distinguem `FACT`, `INFERENCE`, `UNKNOWN` e apontam evidência quando possível.
-23. Cada arquivo principal de skill deve ficar abaixo de 400 linhas físicas; detalhe condicional vai para referência lazy.
-24. `.ai/` é estritamente local: `NEVER_STAGE`, `NEVER_COMMIT`, `NEVER_PUSH`.
-25. Ao criar/reusar `.ai/`, confirmar regra efetiva no `.gitignore`; repetir verificação antes de qualquer commit.
-26. Commit oferece `AUTOMÁTICO | MANUAL | OUTROS`; automático mantém commits faseados e mensagens EN.
-27. PR só ocorre por solicitação explícita; `ABRIR PR` gera título/descrição para input manual e não cria PR/MR remoto.
-28. Merge, rebase, force push e operações Git destrutivas não são automáticos.
-29. Credenciais Jira nunca entram em memória, logs, commit ou PR.
-30. Em `ROUTING_MODE=manual`, toda mudança de papel é gate; sem confirmação técnica de troca automática, tratar como manual.
-31. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
+5. `documentacao-usuario/**` é **HUMAN_ONLY** e possui exclusão global absoluta: nenhuma skill/agente pode ler, buscar, indexar, resumir, citar, incluir em handoff ou usar seu conteúdo como evidência, memória ou fonte de decisão. Se uma busca global retornar resultado desse path, ignorar sem abrir o arquivo. Esta regra tem precedência sobre `reads`, search-first, documentação local relevante e qualquer busca ampla no repositório.
+6. Transcript, logs brutos e features antigas completas não entram automaticamente no contexto.
+7. Fluxo comum é contract-driven: `Jira -> Discovery -> Requirements -> Design -> Solution -> SPEC -> RED -> Code -> GREEN -> Judge`.
+8. `03-prd.md` mantém o nome físico por compatibilidade, mas semanticamente é a **SPEC canônica** aprovada.
+9. Requirement Analysis separa `EXPLICIT_REQUIREMENT`, `IMPLICIT_NECESSITY`, `ASSUMPTION`, `OPEN_QUESTION`, `TECHNICAL_RISK`, `OPTIONAL_IMPROVEMENT`.
+10. `OPEN_QUESTION` bloqueia somente quando a resposta muda materialmente comportamento, contrato, negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
+11. Solution Design segue arquitetura válida existente por padrão, prefere a menor mudança suficiente e só propõe mudança estrutural com ganho material demonstrável.
+12. Revisão arquitetural (`18`) continua opcional e especializada; não é checklist obrigatório.
+13. `OPTIONAL_IMPROVEMENT` nunca vira escopo, RED ou obrigação do Judge sem aprovação explícita.
+14. Planejamento e julgamento usam `R/Jira -> AC -> DD -> PLAN -> arquivo/diff -> teste/evidência`.
+15. RED aprovado fica protegido por `red-tests.lock`; implementação/GREEN não podem alterá-lo.
+16. GREEN usa evidência mecânica; código presente ou teste verde sem rastreabilidade não prova AC.
+17. Judge é fresh-context/read-only e usa `evidence-or-zero`: sem evidência suficiente não há `PASS`.
+18. Mudança no escopo julgado invalida o julgamento e exige novo GREEN + Judge.
+19. Judge FAIL deve ser classificado como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
+20. `IMPLEMENTATION_DEFECT` volta apenas para rework; demais classes passam por `JUDGE_RECOVERY`.
+21. `REOPEN RED` exige recovery + autorização humana exata `REOPEN RED`.
+22. `RED_REVIEW` e `RED_EXECUTION` são estados distintos.
+23. Conclusões materiais distinguem `FACT`, `INFERENCE`, `UNKNOWN` e apontam evidência quando possível.
+24. Cada arquivo principal de skill deve ficar abaixo de 400 linhas físicas; detalhe condicional vai para referência lazy.
+25. `.ai/` é estritamente local: `NEVER_STAGE`, `NEVER_COMMIT`, `NEVER_PUSH`.
+26. Ao criar/reusar `.ai/`, confirmar regra efetiva no `.gitignore`; repetir verificação antes de qualquer commit.
+27. Commit oferece `AUTOMÁTICO | MANUAL | OUTROS`; automático mantém commits faseados e mensagens EN.
+28. PR só ocorre por solicitação explícita; `ABRIR PR` gera título/descrição para input manual e não cria PR/MR remoto.
+29. Merge, rebase, force push e operações Git destrutivas não são automáticos.
+30. Credenciais Jira nunca entram em memória, logs, commit ou PR.
+31. Em `ROUTING_MODE=manual`, toda mudança de papel é gate; sem confirmação técnica de troca automática, tratar como manual.
+32. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
 
 ## 3. NEW e RESUME
 
@@ -106,6 +107,7 @@ Se `ROUTING_MODE=manual` e o próximo papel diferir do atual, salvar estado, mar
 | `PRD_PLAN_REVIEW` | `06-prd-plano.md` | `HEAD_STRONG` |
 | `RED_REVIEW` | `07-testes-red.md` | `EXECUTOR` |
 | `RED_EXECUTION` | `07-testes-red.md` | `EXECUTOR` |
+| `WAITING_GO` | `08-implementacao-go.md` (aguarda autorização antes de iniciar) | `EXECUTOR` |
 | `IMPLEMENTING` | `08-implementacao-go.md` | `EXECUTOR` |
 | `REWORK_IMPLEMENTATION` | `08-implementacao-go.md` | `EXECUTOR` |
 | `GREEN_VALIDATION` | `09-validacao-green.md` | `EXECUTOR` |
@@ -174,7 +176,7 @@ para `STANDARD_GATED`.
 
 Após `AUTO-GO`: RED -> lock -> implementação -> GREEN sem novas aprovações até Judge.
 
-## 9. Lazy loading e handoff
+## 9. Lazy loading, exclusões e handoff
 
 Carregar por chamada:
 
@@ -187,7 +189,18 @@ ORCHESTRATOR_CORE
 + código necessário
 ```
 
-Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar transcript.
+Exclusão absoluta antes de qualquer leitura/busca:
+
+```text
+documentacao-usuario/**  # HUMAN_ONLY
+```
+
+O path acima nunca é candidato a contexto, mesmo quando uma skill permite `project_documentation_*`,
+quando o usuário executa busca ampla ou quando um termo do Jira coincide com conteúdo do manual.
+Resultados encontrados nesse path devem ser descartados sem abrir o arquivo.
+
+Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar transcript. Conteúdo de
+`documentacao-usuario/**` nunca entra em handoff.
 
 ## 10. Memória por Jira
 
@@ -262,7 +275,8 @@ FEATURE_WARNING_USD=10
 ```
 
 Economia vem de search-first, lazy loading, contexto compacto, model routing e gates mecânicos — nunca
-de omitir validação material.
+de omitir validação material. A exclusão `HUMAN_ONLY` da documentação do usuário também existe para
+evitar leitura redundante e gasto de tokens sem valor operacional.
 
 ## 13. Cenários on-demand
 
@@ -275,6 +289,7 @@ referenciar orquestrador.md
 -> RESUME ou NEW
 -> FLOW_SELECTION se NEW
 -> JIRA_ACCESS
+-> FILTRAR HUMAN_ONLY PATHS
 -> LOAD CURRENT SKILL ONLY
 -> LOAD ALLOWED CONTEXT ONLY
 -> EXECUTE

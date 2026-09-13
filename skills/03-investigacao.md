@@ -13,6 +13,7 @@ reads:
   - git_history_targeted_only
   - project_documentation_relevant_only
 forbidden_reads:
+  - documentacao-usuario/**
   - chat_transcript
   - raw_build_logs_unless_relevant
   - unrelated_source_files
@@ -77,10 +78,13 @@ Para decisão técnica, usar esta ordem de confiança:
 ```text
 1. código executável + testes atuais
 2. configuração/contratos ativos versionados
-3. padrões comprovados no projeto + documentação local relevante
+3. padrões comprovados no projeto + documentação local relevante permitida
 4. documentação oficial externa, somente quando necessária para comportamento de framework/API
 5. inferência explicitamente marcada
 ```
+
+`documentacao-usuario/**` nunca é documentação local permitida para esta cadeia. É `HUMAN_ONLY` por
+regra global do `orquestrador.md` e deve ser ignorada sem leitura mesmo quando uma busca retornar match.
 
 Não pesquisar documentação externa por padrão. Fazer isso somente quando uma decisão depender de
 comportamento não comprovável localmente. Se ainda não houver evidência suficiente, registrar `UNKNOWN`;
@@ -101,6 +105,12 @@ logs/
 binários
 dumps
 relatórios extensos
+```
+
+Exclusão absoluta, sem exceção operacional:
+
+```text
+documentacao-usuario/**  # HUMAN_ONLY
 ```
 
 Git continua permitido de forma **pontual** (`log`, `show`, `diff`, `blame`) quando ajudar a hipótese.
@@ -136,7 +146,7 @@ IMPACT_IF_WRONG:
 ```
 
 Código executável e testes atuais têm precedência sobre README ou memória antiga. Configuração
-versionada e contratos ativos vêm depois. Documentação e memória são pistas que precisam de
+versionada e contratos ativos vêm depois. Documentação permitida e memória são pistas que precisam de
 revalidação. Conflitos entre fontes devem aparecer no discovery; nunca escolher silenciosamente a
 fonte mais conveniente.
 

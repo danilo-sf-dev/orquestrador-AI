@@ -1,10 +1,10 @@
-# Workflow agêntico para Java/Spring Boot — V1.9.0
+# Workflow agêntico para Java/Spring Boot — V1.9.1
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
 testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
 controlado e custo previsível**.
 
-## Foco da V1.9.0
+## Foco da V1.9
 
 A V1.9 mantém os controles de execução da V1.8 e fortalece o que acontece **antes do RED**:
 
@@ -18,6 +18,9 @@ A V1.9 mantém os controles de execução da V1.8 e fortalece o que acontece **a
 8. Judge com regra **evidence-or-zero** por critério;
 9. QUICK preservado: executa versões compactas de Requirement Analysis + Solution Check sem novos artefatos/gates;
 10. skills principais abaixo de 400 linhas e referências lazy-loaded quando necessário.
+
+A V1.9.1 adiciona a documentação humana organizada em `documentacao-usuario/` e um guardrail global
+`HUMAN_ONLY`: essa pasta é exclusiva do usuário e nunca deve entrar no contexto dos agentes.
 
 Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
@@ -43,7 +46,7 @@ RED -> Code -> GREEN -> Judge
 A SPEC manda sobre implementação e testes. O executor não pode redefinir silenciosamente requisitos,
 RED ou decisões aprovadas para fazer a solução passar.
 
-## Entrada única
+## Entrada única do agente
 
 ```text
 Leia e siga:
@@ -51,6 +54,19 @@ Leia e siga:
 ```
 
 O orquestrador resolve `RESUME` ou `NEW`, seleciona fluxo, papel, skill, contexto permitido e gate.
+
+### Documentação exclusiva do usuário
+
+O manual humano está em:
+
+```text
+documentacao-usuario/README.md
+```
+
+Essa pasta explica estados, etapas, papéis, gates, arquivos e nomenclaturas em PT-BR. Ela é
+**HUMAN_ONLY**: agentes não devem lê-la, buscá-la, indexá-la, incluí-la em handoff ou usá-la como fonte
+técnica. A fonte de verdade operacional continua sendo `orquestrador.md`, a skill atual e os artefatos
+permitidos da feature.
 
 ### Fluxos
 
@@ -101,7 +117,8 @@ orquestrador mínimo
 + código/testes relevantes
 ```
 
-Não carregar automaticamente README, todas as skills/referências, transcript, logs brutos ou features antigas completas.
+Não carregar automaticamente README, `documentacao-usuario/**`, todas as skills/referências,
+transcript, logs brutos ou features antigas completas.
 
 ## Memória por feature
 
