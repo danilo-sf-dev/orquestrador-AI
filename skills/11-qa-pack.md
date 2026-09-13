@@ -6,7 +6,7 @@ context_loading: lazy
 reads:
   - STATE.md
   - 00-jira.md
-  - 03-prd.md
+  - 03-spec.md
   - 04-implementation-plan.md
   - 08-judgement.md
   - approved_api_contracts
@@ -24,7 +24,7 @@ forbidden_reads:
 forbidden_writes:
   - source_code
   - locked_red_tests
-  - approved_prd
+  - approved_spec
 ---
 
 # Skill — QA Pack
