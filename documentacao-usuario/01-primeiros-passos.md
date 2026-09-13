@@ -28,16 +28,8 @@ objetivamente testável e não exigir decisão arquitetural relevante.
 O QUICK faz uma análise compacta antes da aprovação e, após `AUTO-GO`, executa RED, lock,
 implementação e GREEN sem novas aprovações intermediárias até o handoff para o Judge.
 
-Não é adequado quando houver sinal material de:
-
-- banco/migração;
-- mensageria;
-- segurança;
-- concorrência/transação relevante;
-- contrato material entre serviços;
-- cross-repo inesperado;
-- regra de negócio ambígua;
-- decisão estrutural/arquitetural.
+Não é adequado quando houver sinal material de banco/migração, mensageria, segurança, concorrência,
+contrato material entre serviços, cross-repo inesperado, regra de negócio ambígua ou decisão arquitetural.
 
 Nesses casos o fluxo deve migrar para COMUM.
 
@@ -98,7 +90,7 @@ skills/04b-design-solucao.md
 skills/18-qualidade-arquitetural.md
 → revisar arquitetura/patterns quando houver motivo real
 
-skills/06-prd-plano.md
+skills/06-spec-plano.md
 → estruturar SPEC + plano
 
 skills/10-juiz.md
@@ -115,7 +107,7 @@ Você normalmente decide ou autoriza:
 - Jira/feature;
 - respostas a perguntas realmente bloqueantes;
 - `APROVAR SOLUÇÃO`;
-- `APROVAR PRD/PLANO`;
+- `APROVAR SPEC/PLANO`;
 - `APROVAR RED`;
 - `GO` ou `AUTO-GO` conforme o fluxo;
 - `REOPEN RED` quando recovery demonstrar necessidade real;
