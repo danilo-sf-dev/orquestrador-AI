@@ -6,9 +6,10 @@ writes: [07-green-evidence.md, STATE.md]
 context_loading: lazy
 reads:
   - STATE.md
-  - 01-requirements.md
-  - 03-prd.md
-  - 04-implementation-plan.md
+  - 01-requirements.md_if_exists
+  - 03-prd.md_if_exists
+  - 04-implementation-plan.md_if_exists
+  - quick_contract_if_flow_mode_quick
   - 05-red-tests.md
   - red-tests.lock
   - 06-implementation-summary.md
@@ -28,19 +29,21 @@ forbidden_writes:
 # Skill — Validação GREEN
 
 ## Objetivo
-Demonstrar com evidência mecânica que a implementação atende a SPEC/testes selados sem alterar o contrato
-para induzir aprovação.
+Demonstrar com evidência mecânica que a implementação atende ao contrato aprovado e aos testes selados
+sem alterar o contrato para induzir aprovação.
+
+No `STANDARD_GATED`, o contrato é a SPEC. No `QUICK_AUTOGO`, é o Quick Contract aprovado.
 
 ## Ordem
 1. Validar hashes do `red-tests.lock` antes dos testes.
 2. Compilar.
-3. Rodar os testes unitários RED aprovados, incluindo happy path e edge cases selados.
-4. Conferir que a matriz de edge cases aprovada continua representada pelos testes lockados.
-5. Confirmar rastreabilidade `R/AC -> DD/PLAN -> teste/evidência -> resultado` para o escopo implementado.
-6. Rodar testes relacionados/regressão proporcional ao risco.
-7. Coletar contagens reais de execução quando a ferramenta fornecer.
+3. Rodar os testes RED aprovados, incluindo happy path e edge cases selados.
+4. Conferir que a matriz aprovada continua representada pelos testes lockados.
+5. Confirmar rastreabilidade do contrato para teste/evidência/resultado.
+6. Rodar regressão proporcional ao risco.
+7. Coletar contagens reais quando a ferramenta fornecer.
 8. Validar hashes novamente.
-9. Verificar `git diff` dos arquivos de teste selados.
+9. Verificar `git diff` dos testes selados.
 
 ## Mechanical GREEN gate
 
@@ -53,20 +56,19 @@ RED_TESTS: PASS
 RELATED_REGRESSION: PASS | NOT_APPLICABLE_WITH_REASON
 UNEXPECTED_FAILURES: 0
 UNEXPECTED_SKIPPED: 0
-AC_WITH_EVIDENCE: <N>/<TOTAL>
+CONTRACT_WITH_EVIDENCE: <N>/<TOTAL>
 LOCK_AFTER: VALID
 LOCKED_TEST_DIFF: CLEAN
 ```
 
-Não inferir números ausentes. Se a ferramenta não fornecer contagem, registrar `NOT_REPORTED` e usar a
-evidência disponível sem fabricar precisão.
+No STANDARD, `CONTRACT_WITH_EVIDENCE` usa `R/AC`. No QUICK, usa itens/comportamentos do Quick Contract.
+Não inferir números ausentes; registrar `NOT_REPORTED` quando a ferramenta não fornecer contagem.
 
-Um AC que dependa de evidência não unitária pode usar `QA`, `INTEGRATION`, `STATIC_VERIFICATION` ou
-`EXTERNAL_VALIDATION`, mas deve ficar explicitamente `PENDING_EXTERNAL` até a fase responsável. Isso
-pode resultar em GREEN técnico `PASS` com limitação registrada; não transforma evidência futura em prova atual.
+Evidência não unitária (`QA`, `INTEGRATION`, `STATIC_VERIFICATION`, `EXTERNAL_VALIDATION`) deve ficar
+`PENDING_EXTERNAL` até a fase responsável. Evidência futura não vira prova atual.
 
 ## Resultado inválido
-Se qualquer teste selado tiver sido modificado sem reabertura RED:
+Se teste selado foi modificado sem reabertura RED:
 
 ```text
 GREEN_STATUS=INVALID_GREEN
@@ -83,20 +85,20 @@ GREEN_STATUS=FAIL
 
 Não avançar para Judge até corrigir implementação ou acionar recovery apropriado.
 
-## Se o teste realmente precisar mudar
-Voltar à skill RED:
+## Se RED realmente precisar mudar
 
 ```text
 REOPEN_RED_REQUIRED=true
 ```
 
-Explicar motivo, obter aprovação via recovery, gerar novo lock, então retomar.
+Parar, passar por recovery, obter autorização explícita, gerar novo RED/lock e só então retomar.
 
 ## `07-green-evidence.md`
 Registrar:
 
 ```text
 GREEN_STATUS:
+FLOW_MODE:
 LOCK_BEFORE:
 COMPILE:
 TEST_COMMANDS:
@@ -106,7 +108,7 @@ ERRORS:
 SKIPPED:
 UNEXPECTED_FAILURES:
 UNEXPECTED_SKIPPED:
-AC_EVIDENCE_MATRIX:
+CONTRACT_EVIDENCE_MATRIX:
 RELATED_REGRESSION:
 LOCK_AFTER:
 LOCKED_TEST_DIFF:
@@ -114,10 +116,11 @@ LIMITATIONS:
 QA_PENDING:
 ```
 
-Na `AC_EVIDENCE_MATRIX`, usar:
+Matriz:
 
 ```text
-AC-* -> TEST/EVIDENCE -> RESULT -> SOURCE
+STANDARD: R/AC -> TEST/EVIDENCE -> RESULT -> SOURCE
+QUICK: CONTRACT_ITEM -> TEST/EVIDENCE -> RESULT -> SOURCE
 ```
 
 Sem evidência verificável, usar `MISSING` ou `PENDING_EXTERNAL`; nunca `PASS` por interpretação.
