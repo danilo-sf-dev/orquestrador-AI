@@ -1,4 +1,4 @@
-# Workflow agêntico — V1.9.3
+# Workflow agêntico — V1.9.4
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
 testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
@@ -23,7 +23,8 @@ Evolução desta linha:
 
 - **V1.9.1:** manual humano em `documentacao-usuario/` + guardrail `HUMAN_ONLY`;
 - **V1.9.2:** `SPEC` passa a ser a nomenclatura canônica ativa no lugar de PRD;
-- **V1.9.3:** fecha state machine/RESUME, generaliza recovery pré/pós-Judge e reduz duplicação dos cenários.
+- **V1.9.3:** fecha state machine/RESUME, generaliza recovery pré/pós-Judge e reduz duplicação dos cenários;
+- **V1.9.4:** define `MODEL_SWITCH` no mesmo chat como padrão e torna `FRESH_CONTEXT` opcional/explícito.
 
 Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
@@ -91,7 +92,7 @@ COMUM / COMPLETA
 - `ECONOMICAL`: Jira, busca, recon, memória, evidência, archive;
 - `HEAD_STRONG`: requisitos materiais, design, arquitetura, solução, planejamento e recovery;
 - `EXECUTOR`: RED, implementação, GREEN, QA e commit;
-- `JUDGE_PRIMARY`: julgamento independente em fresh context/read-only;
+- `JUDGE_PRIMARY`: julgamento read-only/evidence-isolated;
 - `JUDGE_SECONDARY`: reforço independente em risco alto;
 - `MULTIMODAL`: quando visual é essencial.
 
@@ -102,10 +103,32 @@ HEAD_STRONG     -> DeepSeek V4 Pro 0813
 EXECUTOR        -> GPT-5.6 Luna Pro
 ECONOMICAL      -> DeepSeek V4 Flash 0731
 MULTIMODAL      -> Gemini 3.7 Flash
-JUDGE_PRIMARY   -> DeepSeek V4 Pro fresh/read-only
+JUDGE_PRIMARY   -> DeepSeek V4 Pro read-only/evidence-isolated
 ```
 
 O binding papel → modelo pertence à sessão/runtime. Não usar `.ai/config/model-profile.md`.
+
+## Contexto e troca de modelo
+
+O uso padrão é **um chat por Jira/feature**.
+
+```text
+MODEL_SWITCH
+= trocar o modelo/papel e continuar no mesmo chat
+
+FRESH_CONTEXT
+= abrir uma nova conversa/contexto de forma explícita
+```
+
+`MODEL_SWITCH` é o default. Trocar de `ECONOMICAL` para `HEAD_STRONG`, `EXECUTOR` ou `JUDGE_PRIMARY`
+não reinicia automaticamente a sessão.
+
+`FRESH_CONTEXT` é reservado para situações em que o isolamento realmente agrega valor: contexto poluído,
+loops grandes, auditoria independente, divergência entre juízes ou escolha explícita do usuário.
+
+No Judge, independência significa **read-only + evidence-or-zero + ignorar conclusões do executor**. Ele
+pode operar no mesmo chat sem usar o histórico anterior como evidência. Se `FRESH_CONTEXT` for escolhido,
+usar o handoff mínimo definido em `templates/handoff-packet.md`.
 
 ## Lazy loading
 
@@ -207,7 +230,8 @@ failures/skips inesperados, evidência do contrato e diff limpo dos testes locka
 
 ## Judge e recovery dirigido
 
-Judge executa fresh/read-only e aplica **evidence-or-zero**.
+Judge executa read-only/evidence-isolated e aplica **evidence-or-zero**. O mesmo chat é o padrão; fresh
+context é opção explícita quando houver motivo real de isolamento.
 
 Todo `FAIL` é classificado como:
 
