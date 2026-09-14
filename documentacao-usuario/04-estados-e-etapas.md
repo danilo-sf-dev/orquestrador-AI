@@ -3,9 +3,8 @@
 > HUMAN_ONLY. Este arquivo é para consulta do usuário e não deve ser carregado por agentes.
 
 Use este arquivo quando aparecer um nome como `INTAKE`, `SPEC_PLAN_REVIEW` ou `GREEN_VALIDATION` e você
-quiser saber rapidamente o que ele representa.
-
-Os nomes em português são traduções humanas. O valor canônico continua sendo o nome em inglês.
+quiser saber o que ele representa. Os nomes em português são explicativos; o valor canônico continua
+sendo o identificador em inglês.
 
 ## Referência rápida
 
@@ -29,326 +28,354 @@ Os nomes em português são traduções humanas. O valor canônico continua send
 | `REWORK_IMPLEMENTATION` | Correção da implementação | `08-implementacao-go.md` | `EXECUTOR` |
 | `GREEN_VALIDATION` | Validação GREEN | `09-validacao-green.md` | `EXECUTOR` |
 | `JUDGING` | Julgamento independente | `10-juiz.md` | `JUDGE_PRIMARY` |
-| `JUDGE_RECOVERY` | Recuperação pós-Judge | `17-judge-recovery.md` | `HEAD_STRONG` |
+| `JUDGE_RECOVERY` | Recovery dirigido | `17-judge-recovery.md` | `HEAD_STRONG` |
 | `QA_REVIEW` | Revisão de QA | `11-qa-pack.md` | `EXECUTOR` |
 | `COMMIT_REVIEW` | Revisão/execução de commits | `12-commit-workflow.md` | `EXECUTOR` |
 | `PR_DESCRIPTION` | Descrição de PR/MR | `13-pull-request-workflow.md` | `EXECUTOR` |
 | `READY_TO_ARCHIVE` | Pronto para arquivar | `14-arquivamento.md` | `ECONOMICAL` |
 | `QUICK_AUTOGO` | Execução rápida AUTO-GO | `16-quick-autogo.md` | `EXECUTOR` |
 
+## Regra V1.9.3 — transição determinística
+
+Quando uma fase termina, ela deve deixar no `STATE.md`:
+
+```text
+CURRENT_STATE=<próximo estado canônico>
+NEXT_ACTION=<ação suficiente para retomar>
+```
+
+Assim, `RESUME` não depende da memória do chat anterior.
+
 ---
 
 ## `MODEL_CONFIRMATION` — Confirmação de modelos
 
-**O que é:** bootstrap da sessão. Resolve se existe feature para retomar, confirma os bindings de papel
-→ modelo e define roteamento manual ou automático.
+Resolve NEW/RESUME, confirma bindings papel → modelo e `ROUTING_MODE`.
 
-**O que não faz:** não investiga código nem cria memória de feature nova antes de conhecer o Jira.
-
-**Interação do usuário:** pode confirmar/alterar modelos e modo de roteamento.
+`MODEL_ROLES_CONFIRMED_THIS_SESSION` é resetado no início de cada nova sessão e só volta a `true` após
+a confirmação atual.
 
 ---
 
 ## `JIRA_ACCESS` — Acesso ao Jira
 
-**O que é:** recebe URL ou issue key, lê as credenciais locais e consulta a API do Jira.
-
-**Saída:** contexto normalizado efêmero com `JIRA_CONTEXT_READY=true`.
-
-**Importante:** não cria `.ai`, `STATE.md` ou `00-jira.md`; credenciais nunca entram na memória.
-
-**Interação do usuário:** normalmente nenhuma, salvo erro de acesso ou anexo visual essencial.
+Consulta o Jira usando a configuração local e devolve `JIRA_CONTEXT_READY=true` em memória efêmera.
+Não cria `.ai`, `STATE.md` ou `00-jira.md`.
 
 ---
 
 ## `INTAKE` — Triagem do Jira
 
-**O que é:** transforma o contexto do Jira em ponto de partida da feature.
+Cria a memória da feature somente depois do Jira conhecido e da proteção de `.ai/` confirmada.
 
-**Faz:** protege `.ai/` no Git, cria a pasta da feature, instancia `STATE.md`, persiste `00-jira.md`,
-registra anchors, sinais de risco/cenário e nível de execução.
+Saída típica:
 
-**Não faz:** não propõe implementação nem completa critérios ausentes por suposição.
-
-**Próximo passo típico:** `MEMORY_LOOKUP`.
+```text
+STANDARD_GATED -> MEMORY_LOOKUP
+QUICK_AUTOGO    -> QUICK_AUTOGO
+```
 
 ---
 
 ## `MEMORY_LOOKUP` — Consulta de memória
 
-**O que é:** procura features anteriores relacionadas para evitar reinvestigação.
+Procura features relacionadas sem carregar todo o histórico. Memória é pista; código atual continua
+precisando de revalidação.
 
-**Busca:** Jira, endpoint, classes, DTO/evento/tópico, domínio, repositórios e relações conhecidas.
-
-**Regra:** memória ajuda, mas não substitui revalidação do código atual.
-
-**Próximo passo típico:** `DISCOVERY`.
+Próximo estado no COMUM: `DISCOVERY`.
 
 ---
 
 ## `DISCOVERY` — Investigação
 
-**O que é:** investigação dirigida do código e testes relevantes.
+Codebase Recon `entry-point-first`, search-first e evidência `FACT | INFERENCE | UNKNOWN`.
 
-**Estratégia:** Codebase Recon `entry-point-first`, search-first e leitura mínima suficiente.
+Objetivo: entender somente o fluxo necessário para requisitos/design.
 
-**Classificação de conclusões:** `FACT`, `INFERENCE`, `UNKNOWN`.
-
-**Objetivo:** entregar fatos suficientes para requisitos e design sem mapear o repositório inteiro.
-
-**Próximo passo típico:** `REQUIREMENT_ANALYSIS`, com troca para `HEAD_STRONG` quando o roteamento é manual.
+Próximo estado: `REQUIREMENT_ANALYSIS`.
 
 ---
 
 ## `REQUIREMENT_ANALYSIS` — Análise de requisitos
 
-**O que é:** converte Jira + discovery em contrato de requisitos confiável antes do desenho da solução.
+Classifica itens como:
 
-**Classifica itens materiais como:** `EXPLICIT_REQUIREMENT`, `IMPLICIT_NECESSITY`, `ASSUMPTION`,
-`OPEN_QUESTION`, `TECHNICAL_RISK`, `OPTIONAL_IMPROVEMENT`.
+```text
+EXPLICIT_REQUIREMENT
+IMPLICIT_NECESSITY
+ASSUMPTION
+OPEN_QUESTION
+TECHNICAL_RISK
+OPTIONAL_IMPROVEMENT
+```
 
-**Pode bloquear?** Sim, somente se existir `OPEN_QUESTION` material que não possa ser resolvida com
-segurança pelas evidências existentes.
+Se houver pergunta bloqueante:
 
-**Saída:** `01-requirements.md`.
+```text
+INTERVIEW_OPTIONAL
+```
 
-**Gate humano novo?** Não.
+Sem blocker:
+
+```text
+TECHNICAL_QUALITY_REVIEW  # somente se REQUIRED
+ou
+SOLUTION_DESIGN
+```
+
+Não cria novo gate humano.
 
 ---
 
 ## `INTERVIEW_OPTIONAL` — Entrevista opcional
 
-**O que é:** pergunta ao usuário somente o mínimo necessário para resolver uma questão realmente
-bloqueante identificada na análise de requisitos.
-
-**Não é:** uma rodada genérica de refinamento.
-
-**Depois da resposta:** volta para `REQUIREMENT_ANALYSIS` para fechar/reclassificar o delta.
+Pergunta somente `Q-*` material que não pode ser resolvida por evidência. Depois volta para
+`REQUIREMENT_ANALYSIS` fechar o delta.
 
 ---
 
 ## `TECHNICAL_QUALITY_REVIEW` — Revisão de qualidade técnica
 
-**O que é:** revisão arquitetural opcional e especializada.
+Opcional. Só aparece quando existe gatilho real de arquitetura/qualidade. `NO_CHANGE` é resultado válido.
 
-**Quando aparece:** pedido explícito de arquitetura/qualidade ou evidência de problema estrutural
-material. Arquivo grande, método longo ou preferência estética não bastam.
-
-**Resultado válido:** `NO_CHANGE` também é conclusão completa.
-
-**Saída:** `01-quality-review.md` quando ativada.
-
-**Gate humano novo?** Não.
+Depois: `SOLUTION_DESIGN`.
 
 ---
 
 ## `SOLUTION_DESIGN` — Desenho da solução
 
-**O que é:** desenha a menor solução tecnicamente sólida antes do gate de solução.
+Executa Senior Approach Check e desenha a menor solução sólida. Não pede aprovação aqui.
 
-**Senior Approach Check:** verifica alternativa mais simples, padrão equivalente existente,
-acoplamento/abstração desnecessária, boundaries, contratos e efeitos colaterais.
-
-**Regra principal:** seguir arquitetura válida existente e preferir a menor mudança suficiente.
-
-**Saída:** `02-design.md`.
+Depois: `SOLUTION_REVIEW`.
 
 ---
 
 ## `SOLUTION_REVIEW` — Revisão da solução
 
-**O que é:** consolida requisitos + design + revisão arquitetural opcional em uma solução proposta.
+Consolida requisitos/design e apresenta o gate:
 
-**Valida:** cobertura dos requisitos, zero perguntas bloqueantes, assumptions materiais, contratos,
-riscos, alternativas e ausência de scope creep.
+```text
+APROVAR SOLUÇÃO
+```
 
-**Gate:** `APROVAR SOLUÇÃO`.
-
-**Saída aprovada:** `02-solution.md` e `SOLUTION_APPROVED=true`.
+Após aprovação: `SPEC_PLAN_REVIEW`.
 
 ---
 
 ## `SPEC_PLAN_REVIEW` — Revisão da SPEC e plano
 
-**O que é:** cria a SPEC canônica e o plano de implementação.
+Produz:
 
-**Arquivos principais:** `03-spec.md` e `04-implementation-plan.md`.
+```text
+03-spec.md
+04-implementation-plan.md
+```
 
-**Rastreabilidade:** `R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/componente -> teste/evidência`.
+Gate:
 
-**Gate:** `APROVAR SPEC/PLANO`.
+```text
+APROVAR SPEC/PLANO
+```
 
-**Depois da aprovação:** `SPEC_PLAN_APPROVED=true` e a SPEC fica congelada para orientar RED,
-implementação, GREEN e Judge.
+No fluxo normal segue para `RED_REVIEW`. Em recovery, se existir RED já lockado que precise mudar,
+retorna para `JUDGE_RECOVERY` somente para solicitar `REOPEN RED`.
 
 ---
 
 ## `RED_REVIEW` — Revisão do contrato RED
 
-**O que é:** planeja os testes/evidências que demonstrarão os critérios antes de editar os testes do
-repositório.
+Planeja testes/evidências sem editar ainda os testes do repositório.
 
-**Importante:** neste estado ainda não se materializam os testes RED.
+Gate:
 
-**Gate:** `APROVAR RED`.
+```text
+APROVAR RED
+```
 
-**Validação mínima:** SPEC aprovada, zero questão bloqueante, todos os ACs com verificação planejada e
-nenhum teste sem rastreabilidade.
+Depois: `RED_EXECUTION`.
 
 ---
 
 ## `RED_EXECUTION` — Execução do RED
 
-**O que é:** materializa exatamente o contrato RED aprovado e comprova que os testes falham pelo motivo
-esperado antes da implementação.
+Materializa o RED aprovado, comprova `EXPECTED_FAIL` e gera `red-tests.lock`.
 
-**Resultados inválidos:** `UNEXPECTED_PASS` ou `WRONG_FAILURE` não contam como RED válido.
+Se descobrir fato que invalida contrato/RED antes de conseguir concluir, não redesenha sozinho: passa
+para `JUDGE_RECOVERY` como recovery pré-Judge.
 
-**Ao final:** gera `red-tests.lock`, protege os testes e define `RED_LOCKED=true`.
-
-**Próximo estado:** `WAITING_GO`.
+Após RED válido: `WAITING_GO`.
 
 ---
 
 ## `WAITING_GO` — Aguardando GO
 
-**O que é:** pausa explícita entre RED selado e implementação no fluxo COMUM.
+Agora é um estado formalmente suportado pela skill 08.
 
-**O que já aconteceu:** os testes RED foram aprovados, executados, falharam pelo motivo esperado e foram
-protegidos pelo lock.
+Nenhum código de produção é alterado enquanto aguarda:
 
-**O que falta:** autorização do usuário.
+```text
+GO
+```
 
-**Gate:** `GO`.
+Após GO:
 
-**Depois:** `IMPLEMENTING`.
+```text
+GO_APPROVED=true
+CURRENT_STATE=IMPLEMENTING
+```
 
 ---
 
 ## `IMPLEMENTING` — Implementação
 
-**O que é:** implementação mínima necessária para satisfazer o contrato aprovado e levar os testes
-selados a GREEN.
+Implementa o contrato aprovado sem alterar RED lockado. Se encontrar decisão material que invalide
+contrato/RED, passa por recovery dirigido.
 
-**No COMUM:** segue SPEC + plano + RED.
-
-**No QUICK:** segue Quick Contract + RED.
-
-**Proibido:** alterar testes RED selados ou redefinir requisitos para fazer a solução passar.
+Após conclusão: `GREEN_VALIDATION`.
 
 ---
 
 ## `REWORK_IMPLEMENTATION` — Correção da implementação
 
-**O que é:** correção técnica direcionada após Judge identificar `IMPLEMENTATION_DEFECT`, ou após
-recovery concluir que somente a implementação precisa mudar.
+Correção dirigida quando contrato e RED continuam válidos. Pode vir do Judge, GREEN ou recovery.
 
-**Não faz:** reinvestigação completa nem alteração do RED.
-
-**Depois:** `GREEN_VALIDATION` e novo `JUDGING` fresh.
+Após conclusão: `GREEN_VALIDATION`.
 
 ---
 
 ## `GREEN_VALIDATION` — Validação GREEN
 
-**O que é:** prova mecanicamente que a implementação atende o contrato e preservou o RED lock.
+Comprova lock, compile, testes, regressão e evidência do contrato.
 
-**Verifica quando aplicável:** hashes do lock, compilação, testes RED, regressão, failures/skips
-inesperados, evidência do contrato e diff dos testes selados.
+Resultados:
 
-**PASS não é interpretativo:** ausência de evidência vira `MISSING` ou `PENDING_EXTERNAL`, não PASS.
-
-**Saída:** `07-green-evidence.md`.
+```text
+PASS          -> JUDGING
+FAIL code-only -> REWORK_IMPLEMENTATION
+FAIL contratual -> JUDGE_RECOVERY
+INVALID_GREEN  -> JUDGE_RECOVERY
+```
 
 ---
 
 ## `JUDGING` — Julgamento independente
 
-**O que é:** Judge avalia a entrega contra o contrato aprovado e as evidências observáveis.
+Fresh context/read-only e `evidence-or-zero`.
 
-**Contexto:** novo/fresh e read-only; não recebe histórico persuasivo do executor.
-
-**Regra:** `sem evidência suficiente != PASS`.
-
-**Vereditos:** `PASS`, `PASS_WITH_RISKS`, `FAIL`, `BLOCKED`.
-
-**Se FAIL:** classifica a causa antes de rotear recuperação.
+```text
+PASS/PASS_WITH_RISKS -> QA_REVIEW
+IMPLEMENTATION_DEFECT -> REWORK_IMPLEMENTATION
+outros FAIL -> JUDGE_RECOVERY
+BLOCKED -> permanece JUDGING até resolver blocker
+```
 
 ---
 
-## `JUDGE_RECOVERY` — Recuperação pós-Judge
+## `JUDGE_RECOVERY` — Recovery dirigido
 
-**O que é:** micro-fluxo para tratar `DISCOVERY_GAP`, `RED_CONTRACT_DEFECT` ou
-`REQUIREMENT_AMBIGUITY` sem reiniciar a história inteira.
+Na V1.9.3 não é exclusivo do pós-Judge. Pode ser acionado por:
 
-**Papel:** `HEAD_STRONG`.
+```text
+RED_EXECUTION
+IMPLEMENTATION
+GREEN_VALIDATION
+QUICK_AUTOGO
+JUDGING
+```
 
-**Pode concluir:** implementação apenas, decisão humana pendente ou necessidade real de reabrir RED.
+Ele não edita código/teste/contrato diretamente. Descobre **qual camada ficou inválida** e retorna ao
+menor estado seguro:
 
-**Se RED precisar mudar:** exige autorização humana exata `REOPEN RED`.
+```text
+código       -> REWORK_IMPLEMENTATION
+requisito    -> REQUIREMENT_ANALYSIS
+solução      -> SOLUTION_DESIGN
+SPEC/plano   -> SPEC_PLAN_REVIEW
+RED          -> RED_REVIEW / REOPEN RED
+```
+
+Quando RED já está lockado, `REOPEN RED` continua sendo autorização humana exata obrigatória.
 
 ---
 
 ## `QA_REVIEW` — Revisão de QA
 
-**O que é:** cria cenários de QA, collection Postman/Insomnia e guia para validação manual quando
-aplicável.
+No COMUM, QA é obrigatório e termina em `APROVAR QA`.
 
-**Gate:** `APROVAR QA`.
+No QUICK, pode haver:
 
-**Saídas típicas:** `09-qa-tests.md`, `10-qa-guide.md` e arquivos em `qa/`.
+```text
+QA_STATUS=APPROVED
+ou
+QA_STATUS=NOT_REQUIRED_WITH_REASON
+```
+
+Em ambos os casos resolvidos: `COMMIT_REVIEW`.
 
 ---
 
 ## `COMMIT_REVIEW` — Revisão/execução de commits
 
-**O que é:** planeja e executa ou prepara commits de forma segura, agrupados por intenção.
+Modos:
 
-**Modos:** `AUTOMÁTICO`, `MANUAL`, `OUTROS`.
+```text
+AUTOMÁTICO
+MANUAL
+OUTROS
+```
 
-**Regra:** commit é empacotamento/rastreabilidade, não fase para corrigir código.
+Quando commit fica `COMMITTED`, `EXTERNAL` ou `SKIPPED_BY_USER`:
 
-**Proteção:** `.ai/` nunca pode ser stageada/commitada.
+```text
+PR_DESCRIPTION      # se solicitado
+ou
+READY_TO_ARCHIVE    # se não solicitado
+```
+
+`DEFERRED` permanece em `COMMIT_REVIEW`.
 
 ---
 
 ## `PR_DESCRIPTION` — Descrição de PR/MR
 
-**O que é:** gera somente título e descrição final para o usuário copiar/colar manualmente.
+Gera somente título/descrição para input manual. Não acessa provider remoto.
 
-**Não faz:** não acessa provider remoto, não cria PR/MR, não faz push, merge ou autenticação.
-
-Mesmo a frase “abre o PR” significa, neste projeto, gerar a descrição para input manual.
+Depois de `PR_STATUS=DESCRIPTION_READY`, segue para `READY_TO_ARCHIVE`; não fica esperando estado
+remoto do PR.
 
 ---
 
 ## `READY_TO_ARCHIVE` — Pronto para arquivar
 
-**O que é:** etapa final para transformar a entrega em memória reutilizável.
+Após autorização `ARQUIVAR`, cria `11-archive.md`, atualiza índice e finaliza:
 
-**Pré-condições:** Judge resolvido, QA resolvido conforme fluxo, commit resolvido, PR resolvido conforme
-política e autorização `ARQUIVAR`.
-
-**Saída:** `11-archive.md` e atualização do índice de features.
+```text
+LIFECYCLE=DONE
+NEXT_ACTION=NONE
+```
 
 ---
 
 ## `QUICK_AUTOGO` — Execução rápida AUTO-GO
 
-**O que é:** fluxo compacto para tarefas simples.
+Antes do gate faz análise compacta e apresenta Quick Contract.
 
-**Antes do gate:** faz análise compacta de código, requisitos e solução e apresenta um Quick Contract.
+Se perder elegibilidade **antes** do AUTO-GO:
 
-**Gate:** `AUTO-GO`.
+```text
+FLOW_MODE=STANDARD_GATED
+CURRENT_STATE=MEMORY_LOOKUP
+```
 
-**Depois do AUTO-GO:** RED -> lock -> implementação -> GREEN sem novas aprovações intermediárias até o
-handoff para Judge, salvo bloqueio real ou perda de elegibilidade do QUICK.
+Depois do AUTO-GO: RED -> lock -> implementação -> GREEN -> Judge.
+
+Se surgir problema contratual durante execução, usa recovery dirigido em vez de reiniciar silenciosamente.
 
 ---
 
 ## Nota de legado — PRD → SPEC
 
-Em features arquivadas por versões anteriores, você pode encontrar:
+Em features antigas você pode encontrar:
 
 ```text
 03-prd.md
@@ -357,7 +384,7 @@ PRD_PLAN_APPROVED
 APROVAR PRD/PLANO
 ```
 
-Esses nomes representam a versão histórica do conceito hoje modelado como:
+Correspondem historicamente a:
 
 ```text
 03-spec.md
@@ -366,5 +393,4 @@ SPEC_PLAN_APPROVED
 APROVAR SPEC/PLANO
 ```
 
-Ao consultar uma feature antiga, interprete o conteúdo pelo conceito atual, mas não reutilize os nomes
-PRD em uma feature nova.
+Não reutilizar nomenclatura PRD em feature nova.
