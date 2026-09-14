@@ -36,15 +36,18 @@ Esses nomes são defaults do bootstrap, não configuração persistente do proje
 O modo padrão do Orquestrador é **um chat/sessão por Jira/feature**, com troca de modelo dentro da mesma conversa quando o papel muda.
 
 ```text
-MODEL_SWITCH   = trocar modelo/papel e continuar no mesmo chat
-FRESH_CONTEXT  = abrir nova conversa/contexto de forma explícita
+MODEL_SWITCH     = trocar modelo/papel e continuar no mesmo chat
+COMPACT_CONTEXT  = continuar na mesma sessão, resumindo o histórico quando suportado
+FRESH_CONTEXT    = abrir nova conversa/contexto de forma explícita
 ```
 
 Regras:
 
 - `MODEL_SWITCH` é o padrão;
 - mudança de papel/modelo **não** implica novo chat;
-- `FRESH_CONTEXT` é excepcional e só deve ser usado quando houver motivo explícito, como contexto poluído, loop grande, auditoria independente ou escolha do usuário;
+- `COMPACT_CONTEXT` é a opção intermediária quando o chat ficou longo/poluído mas ainda vale preservar decisões e continuidade; no VS Code usar `/compact` quando disponível;
+- `/clear` no VS Code inicia uma nova sessão e, portanto, equivale conceitualmente a `FRESH_CONTEXT`, não a compactação;
+- `FRESH_CONTEXT` é excepcional e só deve ser usado quando houver motivo explícito, como isolamento forte, loop grande, auditoria independente ou escolha do usuário;
 - o Judge continua read-only e evidence-isolated mesmo no mesmo chat: histórico anterior não vale como evidência e conclusões do executor devem ser ignoradas;
 - quando `FRESH_CONTEXT` for escolhido, usar `templates/handoff-packet.md` com o pacote mínimo permitido.
 
@@ -172,6 +175,7 @@ Aí sim carregar a skill.
 
 Nunca continuar em `ECONOMICAL` para uma fase `HEAD_STRONG` ou `EXECUTOR`; nunca continuar em `EXECUTOR` para `JUDGE_PRIMARY`.
 
+Se o contexto estiver grande/poluído mas ainda útil, preferir `COMPACT_CONTEXT` (`/compact` quando suportado) antes de `FRESH_CONTEXT`.
 Se houver necessidade explícita de isolamento, indicar `FRESH_CONTEXT` separadamente e gerar o handoff mínimo. `MODEL_HANDOFF_REQUIRED` sozinho nunca significa abrir novo chat.
 
 ## Contrato de nomes canônicos
