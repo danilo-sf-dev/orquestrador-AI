@@ -43,7 +43,7 @@ Exemplos:
 - `TECHNICAL_QUALITY_REVIEW`;
 - `SOLUTION_DESIGN`;
 - `SOLUTION_REVIEW`;
-- `PRD_PLAN_REVIEW`;
+- `SPEC_PLAN_REVIEW`;
 - `JUDGE_RECOVERY`.
 
 Ele pode propor/estruturar decisões, mas não substitui gates humanos obrigatórios.
