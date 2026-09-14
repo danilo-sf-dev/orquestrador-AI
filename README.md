@@ -24,7 +24,7 @@ Evolução desta linha:
 - **V1.9.1:** manual humano em `documentacao-usuario/` + guardrail `HUMAN_ONLY`;
 - **V1.9.2:** `SPEC` passa a ser a nomenclatura canônica ativa no lugar de PRD;
 - **V1.9.3:** fecha state machine/RESUME, generaliza recovery pré/pós-Judge e reduz duplicação dos cenários;
-- **V1.9.4:** define `MODEL_SWITCH` no mesmo chat como padrão e torna `FRESH_CONTEXT` opcional/explícito.
+- **V1.9.4:** `MODEL_SWITCH` no mesmo chat vira padrão; `COMPACT_CONTEXT` permite reduzir contexto sem sair da sessão; `FRESH_CONTEXT` fica opcional/explícito.
 
 Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
@@ -116,19 +116,28 @@ O uso padrão é **um chat por Jira/feature**.
 MODEL_SWITCH
 = trocar o modelo/papel e continuar no mesmo chat
 
+COMPACT_CONTEXT
+= continuar na mesma sessão e compactar/resumir o histórico
+
 FRESH_CONTEXT
-= abrir uma nova conversa/contexto de forma explícita
+= iniciar uma nova conversa/contexto de forma explícita
 ```
 
 `MODEL_SWITCH` é o default. Trocar de `ECONOMICAL` para `HEAD_STRONG`, `EXECUTOR` ou `JUDGE_PRIMARY`
 não reinicia automaticamente a sessão.
 
-`FRESH_CONTEXT` é reservado para situações em que o isolamento realmente agrega valor: contexto poluído,
-loops grandes, auditoria independente, divergência entre juízes ou escolha explícita do usuário.
+Quando o chat ficar longo ou poluído, mas as decisões ainda forem úteis, preferir `COMPACT_CONTEXT` antes
+de abrir outra sessão. No VS Code/Copilot Chat, usar `/compact` quando disponível; isso resume o histórico
+e libera contexto mantendo a sessão. `/clear`, por outro lado, inicia uma nova sessão e equivale
+conceitualmente a `FRESH_CONTEXT`.
+
+`FRESH_CONTEXT` fica reservado para situações em que isolamento realmente agrega valor: auditoria
+independente, loops muito grandes, divergência relevante entre agentes/juízes ou escolha explícita do usuário.
 
 No Judge, independência significa **read-only + evidence-or-zero + ignorar conclusões do executor**. Ele
-pode operar no mesmo chat sem usar o histórico anterior como evidência. Se `FRESH_CONTEXT` for escolhido,
-usar o handoff mínimo definido em `templates/handoff-packet.md`.
+pode operar no mesmo chat sem usar o histórico anterior como evidência. Se o contexto estiver carregado,
+pode-se compactar antes do Judge. Se `FRESH_CONTEXT` for escolhido, usar o handoff mínimo definido em
+`templates/handoff-packet.md`.
 
 ## Lazy loading
 
@@ -230,8 +239,8 @@ failures/skips inesperados, evidência do contrato e diff limpo dos testes locka
 
 ## Judge e recovery dirigido
 
-Judge executa read-only/evidence-isolated e aplica **evidence-or-zero**. O mesmo chat é o padrão; fresh
-context é opção explícita quando houver motivo real de isolamento.
+Judge executa read-only/evidence-isolated e aplica **evidence-or-zero**. O mesmo chat é o padrão;
+`COMPACT_CONTEXT` é a opção intermediária e `FRESH_CONTEXT` é explícito quando houver motivo real.
 
 Todo `FAIL` é classificado como:
 
