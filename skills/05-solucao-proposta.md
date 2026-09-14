@@ -13,6 +13,7 @@ reads:
   - 01-quality-review.md # somente quando presente
   - related_feature_memory_selected_only
   - approved_human_decisions
+  - recovery/judge-recovery-<N>.md_if_recovery_in_progress
 forbidden_reads:
   - chat_transcript
   - raw_discovery_logs
@@ -50,7 +51,15 @@ Se qualquer condição falhar, não pedir aprovação de solução.
 - `02-design.md`;
 - memórias relevantes revalidadas;
 - respostas humanas já aprovadas;
-- `01-quality-review.md`, somente quando a revisão opcional tiver sido ativada.
+- `01-quality-review.md`, somente quando a revisão opcional tiver sido ativada;
+- recovery atual, somente quando `RECOVERY_STATUS=IN_PROGRESS`.
+
+## Modo recovery
+
+Quando a solução foi invalidada por recovery, consolidar **somente o delta material** documentado no
+recovery sobre a solução existente. Não reabrir decisões que continuem válidas.
+
+O gate `APROVAR SOLUÇÃO` continua obrigatório porque a solução anterior ficou stale.
 
 ## Entrada opcional de qualidade arquitetural
 
@@ -133,5 +142,17 @@ Somente após aprovação marcar:
 ```yaml
 SOLUTION_APPROVED: true
 CURRENT_STATE: SPEC_PLAN_REVIEW
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+Se `RECOVERY_STATUS=IN_PROGRESS` e `SPEC_STATUS=STALE`:
+
+```yaml
+NEXT_ACTION: APPLY_RECOVERY_SPEC_PLAN_DELTA
+```
+
+Caso contrário:
+
+```yaml
 NEXT_ACTION: BUILD_SPEC_AND_PLAN
 ```
