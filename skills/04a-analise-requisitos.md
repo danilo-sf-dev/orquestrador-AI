@@ -10,6 +10,7 @@ reads:
   - 01-discovery.md
   - approved_human_decisions
   - related_feature_memory_selected_only
+  - recovery/judge-recovery-<N>.md_if_recovery_in_progress
 forbidden_reads:
   - chat_transcript
   - raw_discovery_logs
@@ -41,6 +42,14 @@ CURRENT_STATE: REQUIREMENT_ANALYSIS
 ```
 
 `01-discovery.md` deve existir no fluxo `STANDARD_GATED`.
+
+## Modo recovery
+
+Se `RECOVERY_STATUS=IN_PROGRESS` e `NEXT_ACTION=APPLY_RECOVERY_REQUIREMENT_DELTA`, ler somente o recovery
+atual e aplicar ao `01-requirements.md` o delta material comprovado/decidido. Não reabrir requisitos,
+assumptions ou perguntas que continuem válidos e não repetir discovery completo.
+
+Depois do delta, executar novamente somente os checks de gap capazes de ser afetados pela mudança.
 
 ## Ordem de análise
 
@@ -154,7 +163,16 @@ caso contrário
 -> NEXT_ACTION=DESIGN_SOLUTION
 ```
 
-Em ambos os casos:
+Se `RECOVERY_STATUS=IN_PROGRESS`, manter o recovery ativo até que solução/SPEC/RED afetados sejam
+revalidados. Ao seguir para `SOLUTION_DESIGN`, usar:
+
+```yaml
+NEXT_ACTION: APPLY_RECOVERY_DESIGN_DELTA
+```
+
+quando a solução downstream estiver stale.
+
+Em todos os casos acima:
 
 ```yaml
 NEXT_MODEL_ROLE: HEAD_STRONG
