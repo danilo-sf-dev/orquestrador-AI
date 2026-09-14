@@ -1,37 +1,37 @@
 # Commit — <JIRA-ID>
 
 ## Configuração
-- Execution mode: AUTO | MANUAL | OTHER
-- Technical flow: safe_feature | revalidate | partial | other
-- Memory policy: local_only
-- Commit policy: ask | required | external
+- FLOW:
+- COMMIT_MODE: AUTO | MANUAL | OTHER
+- MEMORY_POLICY: LOCAL_ONLY
 
 ## Repositório
-- Repo:
-- Branch:
-- Base SHA:
+- REPO:
+- BRANCH:
+- BASE_SHA:
 
 ## Gates
-- RED lock:
-- GREEN:
-- Judge:
-- QA:
-- Judgement scope hash:
+- RED_LOCK_STATUS:
+- GREEN_STATUS:
+- JUDGE_STATUS:
+- QA_STATUS:
+- JUDGEMENT_SCOPE_HASH_STATUS:
 
 ## Validações executadas
 - 
 
 ## Commit plan
-- Status: PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
+- COMMIT_PLAN_STATUS: PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
 
 ### Commit 1
-- Type:
-- Intent:
-- Files:
-  - 
-- PT-BR:
-- EN:
-- Execution status: PLANNED | COMMITTED | NOT_EXECUTED
+- ORDER:
+- TYPE:
+- INTENT:
+- FILES:
+  -
+- MESSAGE_PTBR:
+- MESSAGE_EN:
+- EXECUTION_STATUS: PLANNED | COMMITTED | NOT_EXECUTED
 - SHA:
 
 ## Arquivos excluídos intencionalmente
