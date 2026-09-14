@@ -46,6 +46,18 @@ NEXT_ACTION=<ação suficiente para retomar>
 
 Assim, `RESUME` não depende da memória do chat anterior.
 
+## Regra V1.9.4 — contexto e troca de modelo
+
+O padrão é manter **um chat por Jira/feature**:
+
+```text
+MODEL_SWITCH     -> troca modelo/papel no mesmo chat
+COMPACT_CONTEXT  -> mesma sessão com histórico compactado/resumido
+FRESH_CONTEXT    -> nova sessão/contexto, somente quando necessário
+```
+
+No VS Code, `/compact` mantém a sessão e reduz o histórico quando disponível. `/clear` inicia uma nova sessão.
+
 ---
 
 ## `MODEL_CONFIRMATION` — Confirmação de modelos
@@ -250,7 +262,7 @@ Comprova lock, compile, testes, regressão e evidência do contrato.
 Resultados:
 
 ```text
-PASS          -> JUDGING
+PASS           -> JUDGING
 FAIL code-only -> REWORK_IMPLEMENTATION
 FAIL contratual -> JUDGE_RECOVERY
 INVALID_GREEN  -> JUDGE_RECOVERY
@@ -260,7 +272,10 @@ INVALID_GREEN  -> JUDGE_RECOVERY
 
 ## `JUDGING` — Julgamento independente
 
-Fresh context/read-only e `evidence-or-zero`.
+Judge read-only/evidence-isolated e `evidence-or-zero`.
+
+Por padrão, troca-se para `JUDGE_PRIMARY` no mesmo chat. Histórico anterior não serve como evidência. Se o
+contexto estiver pesado, pode-se usar `COMPACT_CONTEXT`; `FRESH_CONTEXT` fica para isolamento explícito.
 
 ```text
 PASS/PASS_WITH_RISKS -> QA_REVIEW
