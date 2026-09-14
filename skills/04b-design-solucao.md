@@ -12,6 +12,7 @@ reads:
   - 01-quality-review.md # somente quando presente
   - related_feature_memory_selected_only
   - approved_human_decisions
+  - recovery/judge-recovery-<N>.md_if_recovery_in_progress
   - source_code_relevant_read_only
 forbidden_reads:
   - chat_transcript
@@ -44,6 +45,12 @@ BLOCKING_OPEN_QUESTIONS: 0
 
 Se uma pergunta bloqueante reaparecer, retornar para `REQUIREMENT_ANALYSIS`; não escolher por conta
 própria.
+
+## Modo recovery
+
+Se `RECOVERY_STATUS=IN_PROGRESS` e `NEXT_ACTION=APPLY_RECOVERY_DESIGN_DELTA`, usar o finding atual e o
+`02-design.md` existente como base. Reavaliar somente decisões, boundaries, contratos e riscos afetados
+pelo delta; não redesenhar a solução inteira nem reabrir decisões que continuam válidas.
 
 ## Princípio
 
@@ -172,4 +179,7 @@ Ao concluir:
 SOLUTION_DESIGN_STATUS: COMPLETE
 CURRENT_STATE: SOLUTION_REVIEW
 NEXT_ACTION: REVIEW_AND_APPROVE_SOLUTION
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
+
+Se `RECOVERY_STATUS=IN_PROGRESS`, manter o recovery ativo até a reaprovação dos contratos downstream afetados.
