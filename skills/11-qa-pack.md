@@ -35,6 +35,29 @@ Judge = `PASS` ou `PASS_WITH_RISKS`.
 
 `PASS_WITH_RISKS` não cria gate separado: riscos aceitos/pendências externas devem estar explícitos no pacote e permanecem visíveis no gate normal `APROVAR QA`.
 
+## Política por fluxo
+
+### `STANDARD_GATED`
+
+QA é obrigatório e segue o gate `APROVAR QA`.
+
+### `QUICK_AUTOGO`
+
+Antes de materializar o pacote, decidir com o usuário se QA/documentação é necessário para a tarefa curta.
+
+Se não for necessário, registrar justificativa objetiva:
+
+```yaml
+QA_STATUS: NOT_REQUIRED_WITH_REASON
+CURRENT_STATE: COMMIT_REVIEW
+NEXT_ACTION: PREPARE_COMMIT_PLAN
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Não criar arquivos de QA vazios apenas para cumprir estrutura.
+
+Se QA for necessário, seguir normalmente e usar `APROVAR QA`.
+
 ## Objetivo
 Criar o material necessário para o QA validar a história em Postman/Insomnia e um guia Word passo a passo.
 
@@ -82,7 +105,7 @@ Estrutura sugerida:
 Se existir template corporativo, reutilizá-lo. Se não for possível gerar DOCX no ambiente, não fingir: deixar `10-qa-guide.md` pronto e registrar o bloqueio operacional.
 
 ## Gate
-Solicitar obrigatoriamente `APROVAR QA` antes de avançar para commit.
+Quando o pacote existir, solicitar obrigatoriamente `APROVAR QA` antes de avançar para commit.
 
 Após aprovação:
 
