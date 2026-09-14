@@ -4,7 +4,7 @@ description: >
   Fluxo curto para tarefas pequenas, localizadas e de baixo risco. Após uma
   única aprovação AUTO-GO, executa RED, lock, implementação e GREEN sem novas
   interrupções até o handoff para Judge.
-model_role: EXECUTOR
+preferred_model_role: EXECUTOR
 context_loading: lazy
 reads:
   - STATE.md
@@ -14,6 +14,7 @@ reads:
 writes:
   - STATE.md
   - 05-red-tests.md
+  - test_files_required_by_quick_red
   - red-tests.lock
   - source_code
   - 06-implementation-summary.md
@@ -42,6 +43,7 @@ para preencher estrutura.
 ```yaml
 FLOW_MODE: QUICK_AUTOGO
 JIRA_CONTEXT_READY: true
+CURRENT_STATE: QUICK_AUTOGO
 ```
 
 O Quick Contract e `AUTO-GO -> RED -> implementação -> GREEN` exigem `EXECUTOR`. Em routing manual,
@@ -73,11 +75,19 @@ EXPLICIT | IMPLICIT_NECESSITY | ASSUMPTION | OPEN_QUESTION | RISK | OPTIONAL
 ```
 
 Se existir `OPEN_QUESTION` capaz de mudar comportamento, contrato, regra de negócio, segurança,
-persistência, integração ou desenho do RED:
+persistência, integração ou desenho do RED, migrar formalmente:
+
+```yaml
+FLOW_MODE: STANDARD_GATED
+CURRENT_STATE: MEMORY_LOOKUP
+NEXT_ACTION: LOOKUP_RELATED_MEMORY
+NEXT_MODEL_ROLE: ECONOMICAL
+```
+
+Registrar também:
 
 ```text
 QUICK_AUTOGO_ABORTED
-RECOMMENDED_FLOW=STANDARD_GATED
 REASON=BLOCKING_OPEN_QUESTION
 ```
 
@@ -92,8 +102,8 @@ Antes do Quick Contract, verificar:
 4. cruza boundary/contrato que torne a tarefa não simples?
 5. há efeito colateral previsível em outro fluxo?
 
-Se houver trade-off material ou necessidade de revisão estrutural, migrar para `STANDARD_GATED`.
-Melhoria estética/sintática não bloqueia e não amplia escopo.
+Se houver trade-off material ou necessidade de revisão estrutural, usar a mesma transição formal para
+`STANDARD_GATED -> MEMORY_LOOKUP`. Melhoria estética/sintática não bloqueia e não amplia escopo.
 
 ## Quick Contract — única aprovação inicial
 Apresentar:
@@ -170,27 +180,35 @@ LOCKED_TEST_DIFF=CLEAN
 Persistir evidência real em `07-green-evidence.md`. Não inventar contagens não reportadas.
 
 ## Escalonamento durante execução
-Abortar QUICK se surgir segundo repositório, mudança de contrato material, banco/migração, mensageria,
-segurança, concorrência, arquitetura, requisito conflitante, necessidade de reinterpretar Jira ou RED
-impossível de definir sem decisão humana.
+Se surgir segundo repositório, mudança de contrato material, banco/migração, mensageria, segurança,
+concorrência, arquitetura, requisito conflitante ou necessidade de reinterpretar Jira/RED **depois que
+a execução já começou**, não reiniciar silenciosamente como STANDARD.
 
-```text
-QUICK_AUTOGO_ABORTED
-RECOMMENDED_FLOW=STANDARD_GATED
-REASON=<motivo>
+Registrar:
+
+```yaml
+FLOW_MODE: STANDARD_GATED
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: QUICK_AUTOGO
+RECOVERY_CLASS: CONTRACT_MISMATCH
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
-Nunca converter silenciosamente QUICK em implementação complexa.
+O recovery decide o menor ponto seguro de retorno e preserva o que continuar válido.
 
 ## Handoff para Judge
 Quando GREEN estiver válido:
 
-```text
-QUICK_READY_FOR_JUDGE
-GREEN: PASS
-RED_LOCK: VALID
+```yaml
+GREEN_STATUS: PASS
+CURRENT_STATE: JUDGING
+NEXT_ACTION: JUDGE_DELIVERY
 NEXT_MODEL_ROLE: JUDGE_PRIMARY
 ```
+
+Em routing manual, marcar `MODEL_HANDOFF_REQUIRED=true` e parar para troca.
 
 O Judge recebe somente Jira, Quick Contract aprovado, RED spec/lock, diff relevante e GREEN evidence.
 Não fornecer transcript nem histórico de tentativas. No QUICK, o Quick Contract é o contrato aprovado;
@@ -200,17 +218,31 @@ não exigir artefatos exclusivos do fluxo STANDARD.
 Usar a classificação da skill 10:
 
 - `IMPLEMENTATION_DEFECT`: `REWORK_IMPLEMENTATION -> GREEN_VALIDATION -> JUDGING fresh`, sem tocar RED.
-- `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`: abortar QUICK e migrar para
-  `JUDGE_RECOVERY [HEAD_STRONG]`.
+- `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`: marcar `FLOW_MODE=STANDARD_GATED` e rotear para `JUDGE_RECOVERY [HEAD_STRONG]` com o finding mínimo.
 
 Não reabrir RED dentro do QUICK sem recovery formal.
 
 ## QA e delivery
-Após Judge PASS, perguntar se QA/documentação é necessário. Se sim, executar skill 11; se não,
-registrar justificativa.
+Após Judge `PASS` ou `PASS_WITH_RISKS`, decidir se QA/documentação é necessário.
 
-Depois seguir `COMMIT_REVIEW`. Commit mantém modos `AUTOMÁTICO | MANUAL | OUTROS`; PR continua on-demand
-e apenas gera descrição para input manual; archive segue skill 14.
+Se sim:
+
+```yaml
+CURRENT_STATE: QA_REVIEW
+NEXT_ACTION: PREPARE_QA_PACK
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Se não:
+
+```yaml
+QA_STATUS: NOT_REQUIRED_WITH_REASON
+CURRENT_STATE: COMMIT_REVIEW
+NEXT_ACTION: PREPARE_COMMIT_PLAN
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Commit mantém modos `AUTOMÁTICO | MANUAL | OUTROS`; PR continua on-demand e apenas gera descrição para input manual; archive segue skill 14.
 
 ## Artefatos QUICK
 Criar somente:
