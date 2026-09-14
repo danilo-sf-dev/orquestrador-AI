@@ -52,7 +52,9 @@ Não fornecer:
 - raciocínio do implementador;
 - mensagens persuasivas dizendo que “está pronto”.
 
-Fornecer somente o pacote de julgamento:
+### Pacote STANDARD
+
+Fornecer somente:
 - Jira/ACs;
 - `01-requirements.md`;
 - design/solução aprovados;
@@ -62,6 +64,19 @@ Fornecer somente o pacote de julgamento:
 - GREEN evidence;
 - decisões humanas aprovadas;
 - limitações conhecidas.
+
+### Pacote QUICK
+
+Fornecer somente:
+- Jira;
+- Quick Contract aprovado;
+- RED spec + lock;
+- diff/código final relevante;
+- GREEN evidence;
+- decisões humanas aprovadas;
+- limitações conhecidas.
+
+Não exigir artefatos STANDARD ausentes no QUICK.
 
 ## Permissões
 - leitura de código/diff: permitida;
@@ -85,8 +100,8 @@ seja a única evidência de um requisito central que o Judge deveria provar agor
 
 ## Rubrica
 Avaliar:
-1. cada critério de aceite e requisito material;
-2. coerência com design, arquitetura e contratos aprovados;
+1. cada critério de aceite/requisito material no STANDARD ou item material do Quick Contract no QUICK;
+2. coerência com design, arquitetura e contratos aprovados quando existirem;
 3. cobertura dos testes, exigindo happy path e edge cases relevantes;
    - confirmar que edge cases derivam dos ACs/regras/contratos/riscos;
    - verificar boundaries, ausência/null, inválidos, branches, erros de dependência e regressões adjacentes quando aplicáveis;
@@ -96,8 +111,8 @@ Avaliar:
 6. riscos não validados;
 7. cross-repo consistency;
 8. evidência suficiente para `READY_FOR_QA`;
-9. rastreabilidade `R/Jira -> AC -> DD -> PLAN -> diff -> teste/evidência`;
-10. aderência aos padrões relevantes registrados na solução/plano aprovados, ou justificativa objetiva para divergências;
+9. rastreabilidade do contrato aprovado até diff/teste/evidência;
+10. aderência aos padrões relevantes registrados na solução/plano aprovados, quando aplicável;
 11. qualidade técnica proporcional ao diff: segurança, tratamento de erro, concorrência/transação,
     desempenho, compatibilidade e manutenibilidade somente quando aplicáveis ao código alterado.
 
@@ -105,9 +120,11 @@ Quando `01-quality-review.md` existir, verificar somente decisões `TQ-*` promov
 Não exigir patterns, camadas ou refactors não aprovados; qualidade não é preferência estética nem
 pretexto para reabrir o escopo.
 
-## Evidence-or-zero por AC
+## Evidence-or-zero
 
-Antes do veredito global, emitir uma linha/bloco para **cada AC**:
+### STANDARD
+
+Emitir uma linha/bloco para **cada AC**:
 
 ```text
 AC: AC-<N>
@@ -120,13 +137,26 @@ RESULT_EVIDENCE:
 TRACE: DD-* -> PLAN-* -> <diff/test>
 ```
 
+### QUICK
+
+Emitir uma linha/bloco para cada item material do Quick Contract:
+
+```text
+CONTRACT_ITEM: QC-<N>
+STATUS: PASS | FAIL | BLOCKED | PENDING_EXTERNAL
+EXPECTED:
+TEST_OR_EVIDENCE:
+CODE_EVIDENCE:
+RESULT_EVIDENCE:
+```
+
 Regras:
 
 - `PASS` exige evidência concreta suficiente para o comportamento esperado;
 - ausência de evidência nunca é compensada por "código parece correto";
-- `PENDING_EXTERNAL` só é válido quando a SPEC já definiu evidência posterior (QA/integration/external);
+- `PENDING_EXTERNAL` só é válido quando o contrato aprovado já definiu evidência posterior;
 - requisito central sem prova necessária ao escopo atual impede `PASS` global;
-- teste verde sozinho não basta se não testar o comportamento do AC;
+- teste verde sozinho não basta se não testar o comportamento aprovado;
 - código presente sozinho não prova comportamento.
 
 ## Severidade e evidência
@@ -165,7 +195,7 @@ Mudanças apenas em QA/docs/memória, fora do escopo julgado, não invalidam o j
 
 O nível não altera o gate do Judge; altera somente profundidade de revisão:
 
-- `FAST`: verificar critérios, RED lock, GREEN, diff e edge cases materiais do escopo localizado;
+- `FAST`: verificar contrato, RED lock, GREEN, diff e edge cases materiais do escopo localizado;
 - `STANDARD`: revisão completa padrão;
 - `CRITICAL`: ampliar verificação de contratos, regressões, compatibilidade, persistência/transações e riscos cross-repo. `JUDGE_SECONDARY` pode ser acionado como reforço da mesma fase, sem adicionar novo gate humano.
 
@@ -174,6 +204,31 @@ O nível não altera o gate do Judge; altera somente profundidade de revisão:
 - `PASS_WITH_RISKS`: atende, mas há riscos/validações externas explícitas;
 - `FAIL`: implementação não atende um ou mais requisitos;
 - `BLOCKED`: falta evidência essencial para julgar.
+
+## Roteamento após veredito
+
+### `PASS` ou `PASS_WITH_RISKS`
+
+```yaml
+JUDGE_STATUS: PASS | PASS_WITH_RISKS
+CURRENT_STATE: QA_REVIEW
+NEXT_ACTION: RESOLVE_QA
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+`PASS_WITH_RISKS` não cria um gate novo. Os riscos explícitos seguem visíveis para QA; no QUICK, QA pode
+ser dispensado com justificativa pela skill 11.
+
+### `BLOCKED`
+
+```yaml
+JUDGE_STATUS: BLOCKED
+CURRENT_STATE: JUDGING
+NEXT_ACTION: RESOLVE_JUDGE_BLOCKER
+NEXT_MODEL_ROLE: JUDGE_PRIMARY
+```
+
+Não adivinhar nem converter `BLOCKED` em `FAIL` automaticamente.
 
 ## Em FAIL
 
@@ -203,8 +258,7 @@ JUDGE_RESULT: FAIL
 JUDGE_FAIL_CLASS: <classe>
 FINDING_ID:
 CATEGORY: REQUIREMENT | ARCHITECTURE | CONTRACT | TEST | SECURITY | PERFORMANCE | QUALITY | PROCESS
-AC_AFFECTED:
-REQUIREMENT_AFFECTED:
+AC_OR_CONTRACT_ITEM_AFFECTED:
 PLAN_OR_DECISION_AFFECTED:
 EVIDENCE: <arquivo:linha, teste ou comando verificável>
 EXPECTED:
@@ -225,6 +279,27 @@ RED_CONTRACT_DEFECT
 DISCOVERY_GAP
 REQUIREMENT_AMBIGUITY
 -> JUDGE_RECOVERY [HEAD_STRONG]
+```
+
+Para `IMPLEMENTATION_DEFECT`:
+
+```yaml
+JUDGE_STATUS: FAIL
+CURRENT_STATE: REWORK_IMPLEMENTATION
+NEXT_ACTION: APPLY_JUDGE_FINDING
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Para as demais classes:
+
+```yaml
+JUDGE_STATUS: FAIL
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: JUDGE
+RECOVERY_CLASS: <JUDGE_FAIL_CLASS>
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
 O Judge **não manda genericamente voltar para RED**. Ele também não solicita `REOPEN RED` diretamente;
