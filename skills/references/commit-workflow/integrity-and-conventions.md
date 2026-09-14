@@ -52,8 +52,8 @@ Requisitos mínimos:
 |---|---|
 | Implementação/código | RED íntegro + GREEN válido + Judge PASS/risco aceito |
 | Testes unitários | RED íntegro; pós-lock somente via `REOPEN RED` |
-| QA final | QA aprovado |
-| Commit final completo | Judge + QA + escopo julgado íntegro |
+| QA final | QA aprovado ou `NOT_REQUIRED_WITH_REASON` no QUICK |
+| Commit final completo | Judge + QA resolvido + escopo julgado íntegro |
 
 ## Atomicidade e cross-repo
 
@@ -93,5 +93,3 @@ ordem cross-repo. Não incluir automaticamente:
 - `.ai/**`;
 - metadata de IDE não versionada;
 - arquivos não relacionados.
-
-Graphify é opcional: não instalar, não atualizar automaticamente e nunca stagear `graphify-out/`.
