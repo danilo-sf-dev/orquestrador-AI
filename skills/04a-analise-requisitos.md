@@ -87,13 +87,11 @@ OPTIONAL_IMPROVEMENT
 Regras:
 
 - `EXPLICIT_REQUIREMENT`: está no Jira/decisão humana válida.
-- `IMPLICIT_NECESSITY`: condição técnica necessária para satisfazer requisito explícito sem alterar
-  comportamento de negócio.
+- `IMPLICIT_NECESSITY`: condição técnica necessária para satisfazer requisito explícito sem alterar comportamento de negócio.
 - `ASSUMPTION`: inferência razoável, apoiada por evidência, reversível se estiver errada.
 - `OPEN_QUESTION`: decisão material que não pode ser inferida com segurança.
 - `TECHNICAL_RISK`: risco que precisa de mitigação/validação, não novo requisito.
-- `OPTIONAL_IMPROVEMENT`: ganho possível fora do escopo atual; não segue para implementação sem
-  aprovação explícita.
+- `OPTIONAL_IMPROVEMENT`: ganho possível fora do escopo atual; não segue para implementação sem aprovação explícita.
 
 ## Assumptions x Open Questions
 
@@ -124,23 +122,42 @@ contrato, regra de negócio, segurança, persistência, integração, efeito des
 Preferência estética, nomenclatura interna, detalhe reversível ou padrão já comprovado no projeto não
 bloqueiam o fluxo.
 
-## Escalonamento
+## Escalonamento e transição
 
 Se existir `OPEN_QUESTION BLOCKING=YES`:
 
 ```yaml
 REQUIREMENT_ANALYSIS_STATUS: BLOCKED
-NEXT_ACTION: INTERVIEW_OPTIONAL
+CURRENT_STATE: INTERVIEW_OPTIONAL
+NEXT_ACTION: ASK_BLOCKING_QUESTIONS
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
 Executar `04-entrevista-opcional.md` perguntando somente o mínimo necessário. Após resposta, voltar a
 esta skill para fechar o delta; não repetir discovery completo.
 
-Sem pergunta bloqueante:
+Sem pergunta bloqueante, registrar:
 
 ```yaml
 REQUIREMENT_ANALYSIS_STATUS: COMPLETE
-NEXT_ACTION: TECHNICAL_QUALITY_REVIEW_OR_SOLUTION_DESIGN
+```
+
+Depois rotear de forma determinística:
+
+```text
+TECHNICAL_QUALITY_REVIEW_STATUS=REQUIRED
+-> CURRENT_STATE=TECHNICAL_QUALITY_REVIEW
+-> NEXT_ACTION=REVIEW_TECHNICAL_QUALITY
+
+caso contrário
+-> CURRENT_STATE=SOLUTION_DESIGN
+-> NEXT_ACTION=DESIGN_SOLUTION
+```
+
+Em ambos os casos:
+
+```yaml
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
 ## Saída `01-requirements.md`
