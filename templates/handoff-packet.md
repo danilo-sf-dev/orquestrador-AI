@@ -14,6 +14,7 @@ READ:
   -
 
 DO_NOT_READ:
+  - documentacao-usuario/**
   - chat_transcript
   - raw_discovery_logs
 
@@ -31,19 +32,20 @@ WRITE:
 
 EXPECTED_OUTPUT:
 
-JUDGE_FAIL_CLASS: # somente em recovery
+RECOVERY_SOURCE: # somente em recovery
+RECOVERY_CLASS: # somente em recovery
 RECOVERY_DECISION: # somente em recovery
 ```
 
 ## Regras
 
 - Apontar para artefatos; não copiar conteúdos longos sem necessidade.
+- Nunca incluir `documentacao-usuario/**`; o path é HUMAN_ONLY global.
 - Não incluir transcript do agente anterior.
 - Não incluir hipóteses rejeitadas, logs brutos ou buscas sem valor.
 - `READ` é derivado do frontmatter da skill destino.
 - `DO_NOT_READ` incorpora `forbidden_reads` da skill destino.
 - `WRITE` respeita `writes` e `forbidden_writes`.
-
 
 ## Model routing
 
@@ -55,15 +57,16 @@ MODEL_HANDOFF_REQUIRED:
 CONFIRMATION_PHRASE:
 ```
 
+## Recovery dirigido
 
-## Recovery pós-Judge
-
-Quando `JUDGE_STATUS=FAIL`, o handoff deve incluir somente o finding relevante e sua classificação.
+Quando `RECOVERY_STATUS=REQUIRED|IN_PROGRESS`, o handoff deve incluir somente o trigger/finding relevante
+e sua classificação.
 
 ```yaml
-JUDGE_RESULT: FAIL
-JUDGE_FAIL_CLASS:
-FINDING_IDS: []
+RECOVERY_STATUS:
+RECOVERY_SOURCE:
+RECOVERY_CLASS:
+TRIGGER_OR_FINDING_ID:
 RECOVERY_ARTIFACT:
 ```
 
