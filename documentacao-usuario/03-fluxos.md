@@ -4,56 +4,52 @@
 
 ## Fluxo COMUM — `STANDARD_GATED`
 
-Use quando a história/bug precisa de entendimento completo, decisões materiais ou controle maior.
-
 ```text
-JIRA_ACCESS              Acesso ao Jira
+JIRA_ACCESS
     ↓
-INTAKE                   Triagem do Jira
+INTAKE
     ↓
-MEMORY_LOOKUP            Consulta de memória relacionada
+MEMORY_LOOKUP
     ↓
-DISCOVERY                Investigação dirigida do código
+DISCOVERY
     ↓
-REQUIREMENT_ANALYSIS     Análise de requisitos e lacunas
+REQUIREMENT_ANALYSIS
     ↓
-INTERVIEW_OPTIONAL       Somente se houver pergunta realmente bloqueante
+INTERVIEW_OPTIONAL            # somente se pergunta bloqueante
     ↓
-TECHNICAL_QUALITY_REVIEW Somente quando houver gatilho arquitetural real
+TECHNICAL_QUALITY_REVIEW      # somente se houver gatilho real
     ↓
-SOLUTION_DESIGN          Desenho técnico da menor solução sólida
+SOLUTION_DESIGN
     ↓
-SOLUTION_REVIEW          Revisão da solução → APROVAR SOLUÇÃO
+SOLUTION_REVIEW               # APROVAR SOLUÇÃO
     ↓
-SPEC_PLAN_REVIEW         SPEC + plano → APROVAR SPEC/PLANO
+SPEC_PLAN_REVIEW              # APROVAR SPEC/PLANO
     ↓
-RED_REVIEW               Desenho do RED → APROVAR RED
+RED_REVIEW                    # APROVAR RED
     ↓
-RED_EXECUTION            Criação/execução dos testes RED + lock
+RED_EXECUTION                 # comprova RED + lock
     ↓
-WAITING_GO               Aguarda GO
+WAITING_GO                    # GO
     ↓
-IMPLEMENTING             Implementação
+IMPLEMENTING
     ↓
-GREEN_VALIDATION         Validação mecânica do GREEN
+GREEN_VALIDATION
     ↓
-JUDGING                  Judge independente, fresh/read-only
+JUDGING
     ↓
-QA_REVIEW                QA → APROVAR QA
+QA_REVIEW
     ↓
-COMMIT_REVIEW            AUTOMÁTICO | MANUAL | OUTROS
+COMMIT_REVIEW
     ↓
-PR_DESCRIPTION           Somente se solicitado; gera texto, não abre PR remoto
+PR_DESCRIPTION                # somente se solicitado
     ↓
-READY_TO_ARCHIVE         Pronto para arquivamento/memória final
+READY_TO_ARCHIVE              # ARQUIVAR
 ```
 
 `INTERVIEW_OPTIONAL` e `TECHNICAL_QUALITY_REVIEW` não aparecem obrigatoriamente em toda história.
 `REQUIREMENT_ANALYSIS`, `SOLUTION_DESIGN` e a revisão técnica opcional não criam novos gates humanos.
 
 ## Onde o usuário normalmente para no COMUM
-
-Os principais gates são:
 
 ```text
 APROVAR SOLUÇÃO
@@ -69,12 +65,10 @@ Também pode existir troca manual de modelo entre fases quando `ROUTING_MODE=man
 
 ## Fluxo QUICK — `QUICK_AUTOGO`
 
-Use para mudança simples, localizada e de baixo risco.
-
 ```text
 Jira
  ↓
-triagem/contexto mínimo
+INTAKE
  ↓
 QUICK_AUTOGO
   ├─ Codebase Recon compacto
@@ -90,8 +84,6 @@ implementação
  ↓
 GREEN
  ↓
-handoff para JUDGE_PRIMARY
- ↓
 JUDGING
  ↓
 QA se necessário
@@ -100,32 +92,71 @@ COMMIT_REVIEW
  ↓
 PR_DESCRIPTION se solicitado
  ↓
-archive
+READY_TO_ARCHIVE
 ```
 
-O QUICK não cria apenas por formalidade os artefatos completos de Discovery, Requirements, Design,
-SPEC e Plan. O contrato aprovado é o **Quick Contract**.
+O QUICK não cria artefatos completos de Discovery, Requirements, Design, SPEC e Plan só por cerimônia.
+O contrato aprovado é o **Quick Contract**.
 
-## Quando QUICK vira COMUM
+### QUICK perde elegibilidade antes do AUTO-GO
 
-O QUICK deve abortar para `STANDARD_GATED` se surgir algo que descaracterize uma tarefa simples, como:
+Migra formalmente para:
 
-- `OPEN_QUESTION` material;
-- banco/migração;
-- mensageria;
-- segurança;
-- concorrência;
-- cross-repo inesperado;
-- contrato material entre serviços;
-- regra de negócio ambígua;
-- decisão estrutural/arquitetural.
+```text
+FLOW_MODE=STANDARD_GATED
+CURRENT_STATE=MEMORY_LOOKUP
+```
 
-Isso não representa falha do fluxo; é proteção contra executar automaticamente uma mudança que passou
-a exigir análise maior.
+Isso permite que o fluxo COMUM faça memória + discovery completo antes de continuar.
 
-## Fluxo após Judge FAIL
+### QUICK encontra problema depois que começou
 
-O Judge classifica o problema antes de escolher o retorno.
+Não reinicia silenciosamente como COMUM. Usa `JUDGE_RECOVERY` como recovery dirigido para descobrir o
+menor ponto seguro de retorno, preservando tudo que ainda for válido.
+
+## Recovery dirigido — antes ou depois do Judge
+
+Apesar do nome canônico `JUDGE_RECOVERY`, essa skill pode ser acionada por:
+
+```text
+RED_EXECUTION
+IMPLEMENTATION
+GREEN_VALIDATION
+QUICK_AUTOGO
+JUDGING
+```
+
+Ela responde:
+
+```text
+O que realmente ficou inválido?
+Requisito?
+Solução?
+SPEC/plano?
+RED?
+Somente implementação?
+```
+
+E retorna ao menor estado necessário:
+
+```text
+somente código       -> REWORK_IMPLEMENTATION
+requisito             -> REQUIREMENT_ANALYSIS
+solução               -> SOLUTION_DESIGN
+SPEC/plano            -> SPEC_PLAN_REVIEW
+RED sem lock          -> RED_REVIEW
+RED lockado           -> REOPEN RED após reaprovar contratos superiores quando necessário
+```
+
+Se o RED precisar ser alterado depois de lockado, a autorização continua sendo exatamente:
+
+```text
+REOPEN RED
+```
+
+Depois há novo RED/lock, novo GREEN e novo Judge fresh.
+
+## Judge = FAIL
 
 ```text
 IMPLEMENTATION_DEFECT
@@ -134,10 +165,10 @@ REWORK_IMPLEMENTATION
     ↓
 GREEN_VALIDATION
     ↓
-JUDGING fresh novamente
+JUDGING fresh
 ```
 
-Para problemas que podem invalidar descoberta, requisito ou RED:
+Outras classes:
 
 ```text
 RED_CONTRACT_DEFECT
@@ -145,45 +176,29 @@ DISCOVERY_GAP
 REQUIREMENT_AMBIGUITY
     ↓
 JUDGE_RECOVERY [HEAD_STRONG]
-    ↓
-analisa somente o finding/delta
 ```
-
-O recovery pode concluir que basta corrigir implementação, que existe decisão humana pendente ou que o
-RED realmente precisa ser reaberto.
-
-Se o RED precisar mudar, o usuário deve autorizar exatamente:
-
-```text
-REOPEN RED
-```
-
-Depois disso há novo RED/lock, novo GREEN e novo Judge.
 
 ## Roteamento manual de modelos
 
-Quando `ROUTING_MODE=manual`, uma mudança de papel pode interromper o fluxo antes da próxima etapa.
-Exemplo típico:
+Quando `ROUTING_MODE=manual`, mudança de papel pode interromper o fluxo antes da próxima etapa.
+Exemplos:
 
 ```text
 DISCOVERY [ECONOMICAL]
-    ↓
-handoff
-    ↓
+    ↓ handoff
 REQUIREMENT_ANALYSIS [HEAD_STRONG]
-```
 
-Outro ponto importante:
-
-```text
 GREEN_VALIDATION [EXECUTOR]
-    ↓
-handoff
-    ↓
+    ↓ handoff
 JUDGING [JUDGE_PRIMARY]
 ```
 
-A troca existe para preservar custo e independência do Judge; não é uma nova fase funcional da história.
+A troca de modelo não é novo gate funcional.
+
+## RESUME
+
+Toda fase concluída deve deixar `CURRENT_STATE` + `NEXT_ACTION` suficientes para a próxima sessão saber
+qual skill carregar e qual ação executar, sem depender da memória do chat.
 
 ## Nota de legado
 
