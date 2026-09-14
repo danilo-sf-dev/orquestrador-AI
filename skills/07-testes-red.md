@@ -123,6 +123,7 @@ Após aprovação:
 RED_APPROVED: true
 CURRENT_STATE: RED_EXECUTION
 NEXT_ACTION: EXECUTE_RED
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
 ### Modo de reabertura já autorizado
@@ -167,13 +168,16 @@ esperada e selar o lock.
    - critério já está atendido.
 6. Nunca enfraquecer assert para fabricar RED/GREEN.
 7. Registrar em `05-red-tests.md` a evidência real da execução.
-8. Se durante a execução surgir descoberta que invalide o contrato aprovado, **parar**. Não redesenhar RED sozinho.
-9. Nesse caso emitir:
+8. Se durante a execução surgir descoberta que invalide ou coloque em dúvida requisito, SPEC/plano ou o próprio contrato RED, **parar**. Não redesenhar RED sozinho.
+9. Nesse caso registrar:
 
-```text
-RED_EXECUTION_BLOCKED
-REASON=NEW_DISCOVERY_OR_CONTRACT_MISMATCH
-NEXT_STATE=JUDGE_RECOVERY
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: RED_EXECUTION
+RECOVERY_CLASS: CONTRACT_MISMATCH
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
 10. Somente após RED válido gerar `red-tests.lock`.
@@ -215,6 +219,7 @@ Depois:
 RED_LOCKED: true
 CURRENT_STATE: WAITING_GO
 NEXT_ACTION: REQUEST_GO
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
 ---
