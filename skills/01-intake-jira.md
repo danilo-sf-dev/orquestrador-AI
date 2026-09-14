@@ -97,6 +97,28 @@ SCENARIO_SIGNAL:
 OPEN_QUESTIONS:
 ```
 
+## Transição obrigatória
+
+Ao concluir o intake, persistir uma transição determinística conforme o fluxo já escolhido no bootstrap.
+
+### `STANDARD_GATED`
+
+```yaml
+CURRENT_STATE: MEMORY_LOOKUP
+NEXT_ACTION: LOOKUP_RELATED_MEMORY
+NEXT_MODEL_ROLE: ECONOMICAL
+```
+
+### `QUICK_AUTOGO`
+
+```yaml
+CURRENT_STATE: QUICK_AUTOGO
+NEXT_ACTION: PREPARE_QUICK_CONTRACT
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Em roteamento manual, se houver mudança de papel, aplicar o handoff antes de carregar a próxima skill.
+
 ## Não fazer
 - não propor implementação;
 - não entrevistar prematuramente;
