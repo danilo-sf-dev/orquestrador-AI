@@ -1,6 +1,6 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.9.3  
+**Versão:** 1.9.4  
 **Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**; cada skill define como executar sua fase.
 
 ## 1. Princípio central
@@ -31,7 +31,7 @@ Não duplicar aqui regras detalhadas das skills.
 15. Planejamento e julgamento usam rastreabilidade do contrato até código/teste/evidência.
 16. RED aprovado fica protegido por `red-tests.lock`; implementação/GREEN não podem alterá-lo.
 17. GREEN usa evidência mecânica; código presente ou teste verde sem rastreabilidade não prova contrato.
-18. Judge é fresh-context/read-only e usa `evidence-or-zero`: sem evidência suficiente não há `PASS`.
+18. Judge é read-only/evidence-isolated e usa `evidence-or-zero`: sem evidência suficiente não há `PASS`. Mesmo no mesmo chat, histórico anterior não vale como evidência de julgamento.
 19. Mudança no escopo julgado invalida o julgamento e exige novo GREEN + Judge.
 20. Judge FAIL é classificado como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
 21. `IMPLEMENTATION_DEFECT` volta apenas para rework; demais classes passam por `JUDGE_RECOVERY`.
@@ -48,9 +48,12 @@ Não duplicar aqui regras detalhadas das skills.
 32. Merge, rebase, force push e operações Git destrutivas não são automáticos.
 33. Credenciais Jira reais nunca entram em memória, logs, commit ou PR. O arquivo versionado do projeto contém somente placeholders/fake credentials.
 34. Em `ROUTING_MODE=manual`, toda mudança de papel é gate; sem confirmação técnica de troca automática, tratar como manual.
-35. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
-36. `MODEL_ROLES_CONFIRMED_THIS_SESSION` deve ser resetado no início de cada nova sessão antes do bootstrap confirmar bindings atuais.
-37. **Legado PRD:** features antigas podem conter `03-prd.md`, `PRD_PLAN_REVIEW` e `PRD_PLAN_APPROVED`. Interpretar como predecessores históricos da SPEC/plan atuais; não usar PRD em novas features.
+35. Troca de papel/modelo usa `MODEL_SWITCH` no mesmo chat por padrão. Ela nunca implica automaticamente nova conversa.
+36. Quando a sessão ficar longa/poluída mas ainda útil, preferir `COMPACT_CONTEXT`; no VS Code usar `/compact` quando disponível. `/clear` inicia nova sessão e equivale conceitualmente a `FRESH_CONTEXT`.
+37. `FRESH_CONTEXT` é excepcional e explícito: usar apenas quando isolamento real for necessário ou solicitado.
+38. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
+39. `MODEL_ROLES_CONFIRMED_THIS_SESSION` deve ser resetado no início de cada nova sessão antes do bootstrap confirmar bindings atuais.
+40. **Legado PRD:** features antigas podem conter `03-prd.md`, `PRD_PLAN_REVIEW` e `PRD_PLAN_APPROVED`. Interpretar como predecessores históricos da SPEC/plan atuais; não usar PRD em novas features.
 
 ## 3. NEW e RESUME
 
@@ -77,7 +80,7 @@ receber URL/ID Jira
 -> rotear para fluxo escolhido
 ```
 
-## 4. PHASE BANNER / troca de modelo
+## 4. PHASE BANNER / troca de modelo e contexto
 
 Antes de cada fase:
 
@@ -94,6 +97,30 @@ USER_ACTION: <ação necessária ou AUTO_CONTINUE>
 
 Se `ROUTING_MODE=manual` e o próximo papel diferir do atual, salvar estado, marcar
 `MODEL_HANDOFF_REQUIRED=true` e parar até confirmação específica da troca.
+
+Por padrão, a confirmação significa apenas selecionar o novo modelo **no mesmo chat** (`MODEL_SWITCH`).
+
+Política de contexto:
+
+```text
+SAME_CHAT / MODEL_SWITCH
+- default para todo o fluxo
+- mantém a mesma conversa ao trocar modelo/papel
+
+COMPACT_CONTEXT
+- mantém a mesma sessão
+- resume/poda histórico antigo quando o runtime suportar
+- no VS Code: /compact
+- preferir quando contexto ficou grande/poluído, mas decisões anteriores ainda importam
+
+FRESH_CONTEXT
+- nova sessão/contexto
+- excepcional e explícito
+- usar para isolamento forte, auditoria realmente independente, loops muito grandes ou escolha do usuário
+- no VS Code, /clear inicia nova sessão e portanto entra nesta categoria
+```
+
+`MODEL_HANDOFF_REQUIRED=true` nunca significa, sozinho, abrir novo chat.
 
 ## 5. Skills e papéis
 
@@ -132,11 +159,11 @@ Se `ROUTING_MODE=manual` e o próximo papel diferir do atual, salvar estado, mar
 | `EXECUTOR` | GPT-5.6 Luna Pro |
 | `ECONOMICAL` | DeepSeek V4 Flash 0731 |
 | `MULTIMODAL` | Gemini 3.7 Flash |
-| `JUDGE_PRIMARY` | DeepSeek V4 Pro 0813 fresh/read-only |
+| `JUDGE_PRIMARY` | DeepSeek V4 Pro 0813 read-only/evidence-isolated |
 | `JUDGE_SECONDARY` | Gemini 3.7 Flash ou outro independente |
 
 Economizar pelo custo total esperado: `ECONOMICAL` coleta/compacta; `HEAD_STRONG` decide/desambigua;
-`EXECUTOR` aplica contrato aprovado; `JUDGE_*` preserva independência.
+`EXECUTOR` aplica contrato aprovado; `JUDGE_*` preserva independência de responsabilidade e evidência.
 
 ## 7. Fluxo `STANDARD_GATED`
 
@@ -158,7 +185,7 @@ JIRA_ACCESS [ECONOMICAL]
 -> GREEN_VALIDATION [EXECUTOR]
 -> JUDGING [JUDGE_PRIMARY]
    -> PASS/PASS_WITH_RISKS: QA_REVIEW
-   -> IMPLEMENTATION_DEFECT: REWORK_IMPLEMENTATION -> GREEN -> Judge fresh
+   -> IMPLEMENTATION_DEFECT: REWORK_IMPLEMENTATION -> GREEN -> Judge
    -> demais FAIL classes: JUDGE_RECOVERY [HEAD_STRONG]
 -> QA_REVIEW [EXECUTOR] [APROVAR QA]
 -> COMMIT_REVIEW [EXECUTOR] [AUTOMÁTICO | MANUAL | OUTROS]
@@ -233,6 +260,10 @@ documentacao-usuario/**  # HUMAN_ONLY
 
 Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar transcript. O template também
 carrega `documentacao-usuario/**` em `DO_NOT_READ` como defesa adicional.
+
+No `MODEL_SWITCH` normal, handoff não exige nova sessão. Em `COMPACT_CONTEXT`, preservar no resumo pelo menos
+Jira/objetivo, decisões aprovadas, contrato vigente, `CURRENT_STATE`, `NEXT_ACTION`, RED lock e blockers atuais.
+Em `FRESH_CONTEXT`, passar somente o pacote mínimo permitido pela skill destino.
 
 ## 11. Memória por Jira
 
@@ -333,6 +364,8 @@ referenciar orquestrador.md
 -> EXECUTE
 -> CHECK GATE
 -> SAVE CURRENT_STATE + NEXT_ACTION
--> HANDOFF quando necessário
+-> MODEL_SWITCH no mesmo chat quando o papel mudar
+-> COMPACT_CONTEXT somente quando útil
+-> FRESH_CONTEXT somente quando explicitamente necessário
 -> NEXT
 ```
