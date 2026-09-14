@@ -55,11 +55,27 @@ Confirmar também:
 - `ROUTING_MODE=automatic|manual`;
 - orçamento default: `US$40/mês`, alvo `US$8/feature`, warning `US$10`.
 
+### Regra de sessão
+
+`MODEL_ROLES_CONFIRMED_THIS_SESSION` nunca é herdado como verdade de uma sessão anterior.
+
+Em `RESUME`, ao selecionar a feature:
+
+```yaml
+MODEL_ROLES_CONFIRMED_THIS_SESSION: false
+```
+
+Somente depois que os bindings atuais forem confirmados nesta nova sessão marcar:
+
+```yaml
+MODEL_ROLES_CONFIRMED_THIS_SESSION: true
+```
+
 ### Regra de persistência
 
 Não criar `.ai/config/model-profile.md` nem arquivo equivalente.
 
-Em `RESUME`, o `STATE.md` existente pode registrar que os papéis foram confirmados **nesta sessão** e o modo de roteamento.
+Em `RESUME`, o `STATE.md` existente pode registrar os papéis confirmados **nesta sessão** e o modo de roteamento.
 
 Em `NEW`, **não criar `STATE.md` ainda**. Manter bindings, routing mode e orçamento como estado efêmero do bootstrap até o usuário informar o Jira. O `STATE.md` só nasce na skill `01-intake-jira.md`, dentro de `.ai/features/<JIRA-ID>/`. Se o runtime expuser o modelo efetivamente usado em uma fase, ele pode aparecer nas métricas históricas da fase; isso não vira configuração.
 
@@ -68,11 +84,12 @@ Em `NEW`, **não criar `STATE.md` ainda**. Manter bindings, routing mode e orça
 Se a feature já existir:
 
 1. ler apenas seu `STATE.md`;
-2. validar `LIFECYCLE`, `CURRENT_STATE` e `NEXT_ACTION`;
-3. não refazer fases aprovadas;
-4. carregar a skill do `CURRENT_STATE`;
-5. aplicar o contrato `reads/forbidden_reads` da skill;
-6. continuar de `NEXT_ACTION`.
+2. resetar `MODEL_ROLES_CONFIRMED_THIS_SESSION=false` antes da confirmação desta sessão;
+3. validar `LIFECYCLE`, `CURRENT_STATE` e `NEXT_ACTION`;
+4. não refazer fases aprovadas;
+5. carregar a skill do `CURRENT_STATE`;
+6. aplicar o contrato `reads/forbidden_reads` da skill;
+7. continuar de `NEXT_ACTION`.
 
 ## Passo 3B — NEW
 
@@ -103,7 +120,6 @@ RESUME=true|false
 SELECTED_JIRA=<id|none>
 NEXT_ACTION=<ação>
 ```
-
 
 ## Regra obrigatória de handoff manual
 
