@@ -2,7 +2,8 @@
 name: juiz
 role: independent_judge
 preferred_model_role: JUDGE_PRIMARY
-mode: fresh_context_read_only
+mode: read_only_evidence_isolated
+context_policy: same_chat_default_fresh_optional
 writes: [08-judgement.md, STATE.md]
 context_loading: lazy
 reads:
@@ -21,7 +22,7 @@ reads:
   - final_diff_or_changed_files
   - approved_human_decisions
 forbidden_reads:
-  - chat_transcript
+  - chat_transcript_as_evidence
   - raw_discovery_logs
   - implementation_attempt_history
   - executor_reasoning
@@ -44,17 +45,32 @@ evidências observáveis.
 sem evidência suficiente != PASS
 ```
 
-## Isolamento obrigatório
-Executar em sessão/contexto novo.
+## Política de contexto e isolamento
 
-Não fornecer:
-- histórico de tentativa/erro do executor;
-- raciocínio do implementador;
-- mensagens persuasivas dizendo que “está pronto”.
+O modo padrão é continuar **no mesmo chat da feature**, fazendo apenas `MODEL_SWITCH` para `JUDGE_PRIMARY` quando necessário.
+
+Trocar modelo não significa abrir novo chat.
+
+A independência do Judge é garantida pelo **contrato de evidência e read-only**, não pela obrigação de uma sessão nova:
+
+- não usar histórico de tentativa/erro do executor como evidência;
+- ignorar raciocínio do implementador e conclusões persuasivas anteriores;
+- julgar somente Jira/contrato aprovado, RED lockado, diff/código final e evidência GREEN permitida;
+- não editar código, teste, SPEC ou contrato.
+
+`FRESH_CONTEXT` é opcional e explícito. Usar somente quando houver motivo concreto, por exemplo:
+
+- contexto excessivamente poluído por loops/recovery;
+- auditoria realmente independente solicitada pelo usuário;
+- divergência relevante entre agentes/juízes;
+- necessidade de reduzir contexto carregado;
+- limitação do runtime/harness.
+
+Quando `FRESH_CONTEXT` for escolhido, montar `templates/handoff-packet.md` com o pacote mínimo abaixo. No mesmo chat, não reler o transcript nem tratá-lo como fonte de decisão.
 
 ### Pacote STANDARD
 
-Fornecer somente:
+Fornecer/usar somente como evidência de julgamento:
 - Jira/ACs;
 - `01-requirements.md`;
 - design/solução aprovados;
@@ -67,7 +83,7 @@ Fornecer somente:
 
 ### Pacote QUICK
 
-Fornecer somente:
+Fornecer/usar somente como evidência de julgamento:
 - Jira;
 - Quick Contract aprovado;
 - RED spec + lock;
@@ -305,10 +321,9 @@ NEXT_MODEL_ROLE: HEAD_STRONG
 O Judge **não manda genericamente voltar para RED**. Ele também não solicita `REOPEN RED` diretamente;
 isso só pode ocorrer após `skills/17-judge-recovery.md` analisar o finding e apresentar o impacto ao usuário.
 
-Depois de qualquer correção: `GREEN_VALIDATION -> JUDGING` novamente em contexto fresh/read-only.
+Depois de qualquer correção: `GREEN_VALIDATION -> JUDGING` novamente. Por padrão, fazer `MODEL_SWITCH` para o Judge no mesmo chat; usar `FRESH_CONTEXT` apenas quando explicitamente necessário.
 
 ## Segundo juiz
-Recomendado para bug de produção, cross-repo, risco alto ou divergência. O segundo juiz também deve ter
-contexto novo e read-only.
+Recomendado para bug de produção, cross-repo, risco alto ou divergência. O segundo juiz também é read-only/evidence-isolated. Para uma auditoria realmente independente, `FRESH_CONTEXT` é recomendado, mas não obrigatório por padrão.
 
 Se os juízes discordarem, não “votar” automaticamente: `BLOCKED_FOR_HUMAN_DECISION=true`.
