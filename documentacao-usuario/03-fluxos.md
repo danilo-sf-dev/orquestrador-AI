@@ -154,7 +154,7 @@ Se o RED precisar ser alterado depois de lockado, a autorização continua sendo
 REOPEN RED
 ```
 
-Depois há novo RED/lock, novo GREEN e novo Judge fresh.
+Depois há novo RED/lock, novo GREEN e novo Judge.
 
 ## Judge = FAIL
 
@@ -165,7 +165,7 @@ REWORK_IMPLEMENTATION
     ↓
 GREEN_VALIDATION
     ↓
-JUDGING fresh
+JUDGING
 ```
 
 Outras classes:
@@ -185,15 +185,19 @@ Exemplos:
 
 ```text
 DISCOVERY [ECONOMICAL]
-    ↓ handoff
+    ↓ MODEL_SWITCH no mesmo chat
 REQUIREMENT_ANALYSIS [HEAD_STRONG]
 
 GREEN_VALIDATION [EXECUTOR]
-    ↓ handoff
+    ↓ MODEL_SWITCH no mesmo chat
 JUDGING [JUDGE_PRIMARY]
 ```
 
-A troca de modelo não é novo gate funcional.
+A troca de modelo não é novo gate funcional e não cria nova conversa por padrão.
+
+Se o chat estiver longo/poluído, mas o histórico ainda tiver decisões úteis, pode-se usar `COMPACT_CONTEXT`
+(`/compact` no VS Code quando disponível). `FRESH_CONTEXT` fica para isolamento explícito; `/clear` no VS Code
+inicia uma nova sessão e entra nessa categoria.
 
 ## RESUME
 
