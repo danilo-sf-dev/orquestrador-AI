@@ -14,7 +14,7 @@ ROUTING_MODE: manual # manual | automatic
 CURRENT_MODEL_ROLE:
 NEXT_MODEL_ROLE:
 MODEL_HANDOFF_REQUIRED: false
-MODEL_ROLES_CONFIRMED_THIS_SESSION: false
+MODEL_ROLES_CONFIRMED_THIS_SESSION: false # resetar no início de cada nova sessão
 
 CANONICAL_HOME:
 REPOSITORIES: []
@@ -36,7 +36,10 @@ GREEN_STATUS: PENDING
 JUDGE_STATUS: PENDING
 JUDGE_FAIL_CLASS: # IMPLEMENTATION_DEFECT | RED_CONTRACT_DEFECT | DISCOVERY_GAP | REQUIREMENT_AMBIGUITY
 RECOVERY_STATUS: NONE # NONE | REQUIRED | IN_PROGRESS | RESOLVED | BLOCKED
-QA_STATUS: PENDING
+RECOVERY_SOURCE: # RED_EXECUTION | IMPLEMENTATION | GREEN_VALIDATION | QUICK_AUTOGO | JUDGE
+RECOVERY_CLASS: # CONTRACT_MISMATCH | RED_CONTRACT_DEFECT | DISCOVERY_GAP | REQUIREMENT_AMBIGUITY
+RECOVERY_RED_REOPEN_REQUIRED: false
+QA_STATUS: PENDING # PENDING | APPROVED | NOT_REQUIRED_WITH_REASON
 COMMIT_MODE: # AUTO | MANUAL | OTHER
 COMMIT_PLAN_STATUS: PENDING # PENDING | PROPOSED | APPROVED | EXECUTED | DEFERRED | EXTERNAL | SKIPPED
 COMMIT_STATUS: PENDING # PENDING | COMMITTED | DEFERRED | EXTERNAL | SKIPPED_BY_USER
@@ -48,12 +51,15 @@ LAST_COMPLETED_PHASE:
 
 ## Regras
 - `CURRENT_STATE` usa somente nomes canônicos do `orquestrador.md`.
+- Toda skill que encerra uma fase deve persistir `CURRENT_STATE` + `NEXT_ACTION` suficientes para `RESUME` determinístico.
 - `BLOCKING_OPEN_QUESTIONS` é contagem; detalhes ficam em `01-requirements.md`.
 - `REQUIREMENT_ANALYSIS_STATUS=BLOCKED` não autoriza implementação ou SPEC final.
-- `JUDGE_FAIL_CLASS` só é preenchido quando `JUDGE_STATUS=FAIL`.
+- `JUDGE_FAIL_CLASS` só é preenchido quando `JUDGE_STATUS=FAIL`; recovery pré-Judge usa `RECOVERY_SOURCE` + `RECOVERY_CLASS`.
 - `RED_REOPEN_COUNT` incrementa somente após autorização humana explícita `REOPEN RED`.
-- `RECOVERY_STATUS` acompanha somente recovery pós-Judge; findings detalhados ficam no artefato de recovery.
+- `RECOVERY_STATUS` registra apenas o checkpoint; finding/delta detalhado fica em `recovery/judge-recovery-<N>.md`.
+- `RECOVERY_RED_REOPEN_REQUIRED=true` indica que o contrato foi corrigido/reaprovado, mas o RED ainda precisa de autorização humana formal para mudar.
 - `CURRENT_MODEL_ROLE` representa o papel realmente em execução, não o desejado.
+- `MODEL_ROLES_CONFIRMED_THIS_SESSION` deve voltar a `false` no início de cada nova sessão antes do bootstrap confirmar os bindings atuais.
 - Antes de trocar papel em `ROUTING_MODE=manual`, definir `NEXT_MODEL_ROLE` e `MODEL_HANDOFF_REQUIRED=true` e parar.
 - Após confirmação da troca manual, mover `NEXT_MODEL_ROLE -> CURRENT_MODEL_ROLE`, limpar `NEXT_MODEL_ROLE` e marcar `MODEL_HANDOFF_REQUIRED=false`.
 - Nunca guardar conteúdo detalhado da feature neste arquivo.
