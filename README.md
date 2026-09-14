@@ -1,4 +1,4 @@
-# Workflow agêntico — V1.9.2
+# Workflow agêntico — V1.9.3
 
 Este pacote define uma esteira agnóstica de modelos para histórias Jira, bugs, mudanças cross-repo,
 testes, QA, commit e descrição de Pull Request. O objetivo continua sendo **qualidade alta com contexto
@@ -9,18 +9,21 @@ controlado e custo previsível**.
 A V1.9 mantém os controles de execução da V1.8 e fortalece o que acontece **antes do RED**:
 
 1. Discovery econômico com **Codebase Recon / entry-point-first**;
-2. nova `Requirement Analysis` para gap scan, assumptions e open questions;
-3. nova `Solution Design` com **Senior Approach Check** proporcional;
-4. revisão arquitetural opcional preservada, sem transformar todo Jira em refactor;
+2. `Requirement Analysis` para gap scan, assumptions e open questions;
+3. `Solution Design` com **Senior Approach Check** proporcional;
+4. revisão arquitetural opcional, sem transformar todo Jira em refactor;
 5. `03-spec.md` como **SPEC canônica** da feature;
 6. rastreabilidade `R/Jira -> AC -> DD -> PLAN -> código/teste/evidência`;
-7. RED/GREEN com gates mais mecânicos;
-8. Judge com regra **evidence-or-zero** por critério;
-9. QUICK preservado: executa versões compactas de Requirement Analysis + Solution Check sem novos artefatos/gates;
+7. RED/GREEN com gates mecânicos;
+8. Judge com regra **evidence-or-zero**;
+9. QUICK preservado, sem artefatos/gates completos desnecessários;
 10. skills principais abaixo de 400 linhas e referências lazy-loaded quando necessário.
 
-A V1.9.1 adicionou a documentação humana organizada em `documentacao-usuario/` e o guardrail global
-`HUMAN_ONLY`. A V1.9.2 consolida `SPEC` como nomenclatura canônica ativa, substituindo `PRD` no fluxo novo.
+Evolução desta linha:
+
+- **V1.9.1:** manual humano em `documentacao-usuario/` + guardrail `HUMAN_ONLY`;
+- **V1.9.2:** `SPEC` passa a ser a nomenclatura canônica ativa no lugar de PRD;
+- **V1.9.3:** fecha state machine/RESUME, generaliza recovery pré/pós-Judge e reduz duplicação dos cenários.
 
 Não foram adicionados novos agentes, novos juízes nem novos gates humanos obrigatórios.
 
@@ -54,6 +57,7 @@ Leia e siga:
 ```
 
 O orquestrador resolve `RESUME` ou `NEW`, seleciona fluxo, papel, skill, contexto permitido e gate.
+Cada fase concluída deixa `CURRENT_STATE` + `NEXT_ACTION` suficientes para retomada determinística.
 
 ### Documentação exclusiva do usuário
 
@@ -63,9 +67,8 @@ O manual humano está em:
 documentacao-usuario/README.md
 ```
 
-Essa pasta explica estados, etapas, papéis, gates, arquivos e nomenclaturas em PT-BR. Ela é
-**HUMAN_ONLY**: agentes não devem lê-la, buscá-la, indexá-la, incluí-la em handoff ou usá-la como fonte
-técnica. A fonte de verdade operacional continua sendo `orquestrador.md`, a skill atual e os artefatos
+Essa pasta é **HUMAN_ONLY**: agentes não devem lê-la, buscá-la, indexá-la, incluí-la em handoff ou usá-la
+como fonte técnica. A fonte operacional continua sendo `orquestrador.md`, a skill atual e os artefatos
 permitidos da feature.
 
 ### Fluxos
@@ -74,7 +77,7 @@ permitidos da feature.
 QUICK / AUTO-GO
 - mudança simples, localizada, inequívoca e de baixo risco
 - uma aprovação inicial
-- RED -> implementação -> GREEN automáticos até handoff para Judge
+- RED -> implementação -> GREEN automáticos até Judge
 
 COMUM / COMPLETA
 - discovery + análise de requisitos + design + SPEC/plano
@@ -149,9 +152,8 @@ transcript, logs brutos ou features antigas completas.
 No QUICK, criar somente artefatos realmente usados. `.ai/` é sempre local e deve estar efetivamente
 ignorada pelo Git ao iniciar/reusar a memória e novamente antes de qualquer commit.
 
-> **Nota de legado:** features arquivadas em versões anteriores podem conter `03-prd.md` e nomes com
-> `PRD_PLAN_*`. Para leitura histórica, interprete esse PRD como o artefato predecessor da SPEC atual,
-> com conceito equivalente/próximo. Não propague a nomenclatura antiga para novas features.
+> **Nota de legado:** features antigas podem conter `03-prd.md` e nomes `PRD_PLAN_*`. Para leitura
+> histórica, interpretar como predecessor da SPEC atual; não propagar PRD para novas features.
 
 ## Fluxo COMUM
 
@@ -160,57 +162,37 @@ JIRA_ACCESS [ECONOMICAL]
 -> INTAKE [ECONOMICAL]
 -> MEMORY_LOOKUP [ECONOMICAL]
 -> DISCOVERY [ECONOMICAL]
--> HANDOFF HEAD_STRONG
 -> REQUIREMENT_ANALYSIS [HEAD_STRONG]
    -> INTERVIEW_OPTIONAL somente se OPEN_QUESTION bloqueante
 -> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente quando requerida
 -> SOLUTION_DESIGN [HEAD_STRONG]
 -> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
 -> SPEC_PLAN_REVIEW [HEAD_STRONG] [APROVAR SPEC/PLANO]
--> HANDOFF EXECUTOR
 -> RED_REVIEW [EXECUTOR] [APROVAR RED]
 -> RED_EXECUTION [EXECUTOR] cria/executa RED + lock
 -> WAITING_GO [EXECUTOR] [GO]
 -> IMPLEMENTING [EXECUTOR]
 -> GREEN_VALIDATION [EXECUTOR]
--> HANDOFF JUDGE_PRIMARY
 -> JUDGING [JUDGE_PRIMARY]
--> QA_REVIEW [EXECUTOR] [APROVAR QA]
+-> QA_REVIEW [EXECUTOR]
 -> COMMIT_REVIEW [EXECUTOR] [AUTOMÁTICO | MANUAL | OUTROS]
 -> PR_DESCRIPTION quando solicitado
 -> READY_TO_ARCHIVE [ECONOMICAL]
 ```
 
 `Requirement Analysis`, `Solution Design` e `Technical Quality Review` não adicionam gates humanos.
-A única parada adicional possível é uma pergunta material que tornaria inseguro prosseguir por inferência.
 
-## Requirement Analysis
+## Requirement Analysis e Solution Design
 
-`skills/04a-analise-requisitos.md` separa:
+`skills/04a-analise-requisitos.md` separa requisito explícito, necessidade implícita, assumption,
+open question, risco técnico e melhoria opcional. Só uma pergunta material bloqueia o fluxo.
 
-```text
-EXPLICIT_REQUIREMENT
-IMPLICIT_NECESSITY
-ASSUMPTION
-OPEN_QUESTION
-TECHNICAL_RISK
-OPTIONAL_IMPROVEMENT
-```
-
-`OPEN_QUESTION` só bloqueia quando a resposta puder mudar materialmente comportamento, contrato, regra
-de negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
-
-## Solution Design
-
-`skills/04b-design-solucao.md` executa o Senior Approach Check: solução mais simples, padrão equivalente,
-acoplamento/abstração desnecessária, boundaries/contratos e efeitos colaterais. A regra é **seguir
-arquitetura válida existente e escolher a menor mudança suficiente**.
-
-`skills/18-qualidade-arquitetural.md` continua opcional e especializada.
+`skills/04b-design-solucao.md` executa o Senior Approach Check e prefere a menor solução suficiente,
+reutilizando padrões válidos do projeto sem introduzir abstração por preferência.
 
 ## SPEC + Plano
 
-`skills/06-spec-plano.md` cria `03-spec.md`, a SPEC canônica da feature. A matriz principal é:
+`skills/06-spec-plano.md` cria `03-spec.md`, a SPEC canônica. A matriz principal é:
 
 ```text
 R-* -> AC-* -> DD-* -> PLAN-* -> arquivo/diff -> teste/evidência
@@ -220,16 +202,12 @@ Delta material posterior retorna à fase responsável; executor não redefine a 
 
 ## RED / GREEN
 
-RED mantém `RED_REVIEW` e `RED_EXECUTION`. Todos os ACs precisam de evidência planejada; evidência pode
-ser unitária, integrada, estática, QA ou externa quando apropriado.
+RED mantém `RED_REVIEW` e `RED_EXECUTION`. GREEN usa gate mecânico com lock, compile, testes, regressão,
+failures/skips inesperados, evidência do contrato e diff limpo dos testes lockados.
 
-GREEN usa gate mecânico com lock, compile, testes, regressão, failures/skips inesperados, evidência por
-AC e diff limpo dos testes lockados.
+## Judge e recovery dirigido
 
-## Judge e recovery
-
-Judge executa fresh/read-only e avalia cada AC com **evidence-or-zero**. Sem evidência suficiente, não
-marca `PASS` por plausibilidade.
+Judge executa fresh/read-only e aplica **evidence-or-zero**.
 
 Todo `FAIL` é classificado como:
 
@@ -240,18 +218,42 @@ DISCOVERY_GAP
 REQUIREMENT_AMBIGUITY
 ```
 
-Somente `IMPLEMENTATION_DEFECT` volta direto para rework; os demais passam por `17-judge-recovery.md`.
+Somente `IMPLEMENTATION_DEFECT` volta direto para rework.
+
+`skills/17-judge-recovery.md` agora é o recovery dirigido único para findings contratuais, podendo ser
+acionado por RED, implementação, GREEN, QUICK ou Judge. Ele retorna ao menor estado seguro:
+
+```text
+Requirement delta -> REQUIREMENT_ANALYSIS
+Solution delta    -> SOLUTION_DESIGN
+SPEC/Plan delta   -> SPEC_PLAN_REVIEW
+RED delta         -> RED_REVIEW / REOPEN RED quando lockado
+Code only         -> REWORK_IMPLEMENTATION
+```
+
+Se o RED estiver lockado, contratos superiores são revalidados/reaprovados primeiro quando necessário;
+só depois o recovery pode solicitar exatamente `REOPEN RED`.
 
 ## QUICK / AUTO-GO
 
 QUICK não materializa Requirements/Design/SPEC/Plan completos. Antes do Quick Contract executa versões
-compactas de Codebase Recon, Requirement Gap, Assumptions/Open Questions e Senior Solution Check. Se
-surgir blocker material ou decisão estrutural, migra para COMUM.
+compactas de Codebase Recon, Requirement Gap, Assumptions/Open Questions e Senior Solution Check.
+
+Antes do AUTO-GO, perda de elegibilidade migra formalmente para `STANDARD_GATED -> MEMORY_LOOKUP`.
+Depois que a execução começou, uma descoberta material usa recovery dirigido para preservar o trabalho válido.
+
+QA no QUICK pode ser aprovado normalmente ou `NOT_REQUIRED_WITH_REASON`.
+
+## Cenários
+
+`skills/cenarios/` contém somente overlays de risco/profundidade. Cenários não duplicam nem substituem o
+pipeline canônico do `orquestrador.md`, reduzindo drift e contexto.
 
 ## Commit e PR
 
 - `12-commit-workflow.md`: commits faseados por intenção; `AUTOMÁTICO`, `MANUAL` ou `OUTROS`.
 - `13-pull-request-workflow.md`: gera somente título/descrição para preenchimento manual; não cria PR/MR remoto.
+- depois do commit/descrição de PR, o estado aponta explicitamente para archive quando aplicável.
 
 ## Orçamento
 
@@ -260,3 +262,6 @@ MONTHLY_BUDGET_USD=40
 FEATURE_TARGET_USD=8
 FEATURE_WARNING_USD=10
 ```
+
+Economia vem de search-first, lazy loading, contexto compacto, model routing e gates mecânicos — nunca
+de omitir validação material.
