@@ -6,14 +6,16 @@ context_loading: lazy
 reads:
   - STATE.md
   - 00-jira.md
-  - 01-discovery.md
-  - 02-solution.md
-  - 03-spec.md
-  - 04-implementation-plan.md
-  - 05-red-tests.md
-  - red-tests.lock
-  - 08-judgement.md
-  - judge_findings_only
+  - 01-discovery.md_if_exists
+  - 01-requirements.md_if_exists
+  - 02-design.md_if_exists
+  - 02-solution.md_if_exists
+  - 03-spec.md_if_exists
+  - 04-implementation-plan.md_if_exists
+  - 05-red-tests.md_if_exists
+  - red-tests.lock_if_exists
+  - 08-judgement.md_if_recovery_source_judge
+  - recovery_trigger_current_only
   - source_code_strictly_relevant_to_finding
   - existing_tests_strictly_relevant_to_finding
 writes:
@@ -28,70 +30,76 @@ forbidden_writes:
   - production_code
   - test_files
   - red-tests.lock
+  - approved_contracts_directly
   - acceptance_criteria_without_human_confirmation
 ---
 
-# Skill — Judge Recovery
+# Skill — Recovery dirigido
 
 ## Objetivo
 
-Tratar `Judge FAIL` quando o problema não é um simples defeito de implementação, sem reiniciar a história inteira e sem deixar o executor improvisar entre Discovery, RED e implementação.
+Tratar um finding material que possa invalidar implementação, requisito, solução, SPEC/plano ou RED
+**sem reiniciar a história inteira e sem deixar o executor improvisar o contrato**.
 
-Esta skill é um **micro-fluxo dirigido pelo finding do Judge**.
-
----
+O estado canônico continua `JUDGE_RECOVERY`, mas esta skill pode ser acionada antes ou depois do Judge.
+O nome do estado não significa que `JUDGE_STATUS=FAIL` seja obrigatório em recovery pré-Judge.
 
 ## Entrada obrigatória
 
 ```yaml
 CURRENT_STATE: JUDGE_RECOVERY
-JUDGE_STATUS: FAIL
-JUDGE_FAIL_CLASS: DISCOVERY_GAP | RED_CONTRACT_DEFECT | REQUIREMENT_AMBIGUITY
+RECOVERY_STATUS: REQUIRED | IN_PROGRESS
+RECOVERY_SOURCE: RED_EXECUTION | IMPLEMENTATION | GREEN_VALIDATION | QUICK_AUTOGO | JUDGE
 ```
 
-`IMPLEMENTATION_DEFECT` não entra nesta skill; vai direto para `REWORK_IMPLEMENTATION`.
+### Quando a origem é `JUDGE`
 
----
+Também exigir:
+
+```yaml
+JUDGE_STATUS: FAIL
+JUDGE_FAIL_CLASS: RED_CONTRACT_DEFECT | DISCOVERY_GAP | REQUIREMENT_AMBIGUITY
+```
+
+`IMPLEMENTATION_DEFECT` vai direto para `REWORK_IMPLEMENTATION`.
+
+### Quando a origem é pré-Judge
+
+Usar `RECOVERY_CLASS`:
+
+```text
+CONTRACT_MISMATCH
+RED_CONTRACT_DEFECT
+DISCOVERY_GAP
+REQUIREMENT_AMBIGUITY
+```
+
+O trigger/finding deve ser compacto e verificável; não carregar histórico de tentativas.
 
 ## Princípio
 
-Investigar **somente o novo fato/questionamento** descoberto pelo Judge.
+Investigar **somente o delta** que gerou o recovery.
 
 Não refazer automaticamente:
 
 - Jira intake;
 - Discovery completo;
-- entrevista inteira;
+- análise de requisitos inteira;
 - solução inteira;
 - SPEC inteira;
 - RED inteiro.
 
-O objetivo é responder:
+Responder:
 
 ```text
-O finding revela algo novo?
-O que exatamente muda?
+O finding revela fato novo?
+Qual contrato/decisão é afetado?
 A solução aprovada continua válida?
-A SPEC/plano precisam de patch?
-O RED continua válido?
-É necessária decisão humana?
+A SPEC/plano continuam válidos?
+O RED/lock continuam válidos?
+Existe decisão humana necessária?
+Qual é o menor estado seguro para retomar?
 ```
-
-### `DISCOVERY_GAP`
-
-Existe comportamento/regra/condição relevante no código ou contrato que não foi descoberta antes.
-
-Executar targeted rediscovery apenas sobre finding, código diretamente ligado, callers/dependências estritamente necessários,
-testes existentes relacionados e contrato afetado.
-
-### `RED_CONTRACT_DEFECT`
-
-O Judge encontrou evidência de que o RED aprovado não representa corretamente o comportamento esperado.
-Não editar RED. Determinar cenário incorreto, por quê, qual parte do contrato muda e impacto em solução/SPEC/plano.
-
-### `REQUIREMENT_AMBIGUITY`
-
-O finding expôs decisão de produto/regra que não pode ser inferida com segurança. Fazer somente a pergunta mínima necessária.
 
 ## Saída obrigatória
 
@@ -104,13 +112,15 @@ recovery/judge-recovery-<N>.md
 Formato:
 
 ```yaml
-JUDGE_FINDING_ID:
-FAIL_CLASS:
+RECOVERY_SOURCE:
+TRIGGER_OR_FINDING_ID:
+RECOVERY_CLASS:
 NEW_FACT:
 TARGETED_EVIDENCE:
+REQUIREMENT_IMPACT: NONE | PATCH_REQUIRED
 SOLUTION_IMPACT: NONE | PATCH_REQUIRED
 SPEC_PLAN_IMPACT: NONE | PATCH_REQUIRED
-RED_IMPACT: VALID | REOPEN_REQUIRED
+RED_IMPACT: VALID | REVIEW_REQUIRED | REOPEN_REQUIRED
 HUMAN_DECISION_REQUIRED: true|false
 DECISION:
 NEXT_STATE:
@@ -118,20 +128,97 @@ NEXT_STATE:
 
 Não copiar transcript nem logs extensos.
 
-## Decisão de roteamento
+## Roteamento mínimo
 
 ### Caso A — implementação apenas
 
-Se RED e decisões continuam válidos:
+Se requisitos, solução, SPEC/plano e RED continuam válidos:
 
-```text
-DECISION=IMPLEMENTATION_ONLY
-NEXT_STATE=REWORK_IMPLEMENTATION
+```yaml
+DECISION: IMPLEMENTATION_ONLY
+RECOVERY_STATUS: RESOLVED
+CURRENT_STATE: REWORK_IMPLEMENTATION
+NEXT_ACTION: APPLY_RECOVERY_FINDING
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
-### Caso B — RED precisa mudar
+### Caso B — requisito precisa ser esclarecido/corrigido
 
-Se `RED_IMPACT=REOPEN_REQUIRED`, apresentar ao usuário:
+Se uma decisão humana for necessária, perguntar somente o ponto material e manter:
+
+```yaml
+RECOVERY_STATUS: BLOCKED
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: WAIT_HUMAN_DECISION
+```
+
+Depois da decisão, se o requisito mudar materialmente:
+
+```yaml
+RECOVERY_STATUS: IN_PROGRESS
+REQUIREMENT_ANALYSIS_STATUS: PENDING
+SOLUTION_DESIGN_STATUS: PENDING
+SOLUTION_APPROVED: false
+SPEC_STATUS: STALE
+SPEC_PLAN_APPROVED: false
+RECOVERY_RED_REOPEN_REQUIRED: <true se RED_LOCKED=true; senão false>
+CURRENT_STATE: REQUIREMENT_ANALYSIS
+NEXT_ACTION: APPLY_RECOVERY_REQUIREMENT_DELTA
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+### Caso C — solução precisa mudar, requisitos continuam válidos
+
+```yaml
+RECOVERY_STATUS: IN_PROGRESS
+SOLUTION_DESIGN_STATUS: PENDING
+SOLUTION_APPROVED: false
+SPEC_STATUS: STALE
+SPEC_PLAN_APPROVED: false
+RECOVERY_RED_REOPEN_REQUIRED: <true se RED_LOCKED=true; senão false>
+CURRENT_STATE: SOLUTION_DESIGN
+NEXT_ACTION: APPLY_RECOVERY_DESIGN_DELTA
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+### Caso D — somente SPEC/plano precisa mudar
+
+```yaml
+RECOVERY_STATUS: IN_PROGRESS
+SPEC_STATUS: STALE
+SPEC_PLAN_APPROVED: false
+RECOVERY_RED_REOPEN_REQUIRED: <true se RED_LOCKED=true; senão false>
+CURRENT_STATE: SPEC_PLAN_REVIEW
+NEXT_ACTION: APPLY_RECOVERY_SPEC_PLAN_DELTA
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+A skill responsável aplica o delta documentado e usa seu gate humano normal. Recovery não edita diretamente
+solução/SPEC/plano aprovados.
+
+### Caso E — RED precisa mudar e o contrato superior já está válido
+
+Se **não existe lock válido ainda**, retornar ao gate normal:
+
+```yaml
+RECOVERY_STATUS: RESOLVED
+RED_APPROVED: false
+RED_LOCKED: false
+CURRENT_STATE: RED_REVIEW
+NEXT_ACTION: REDESIGN_RED_FROM_RECOVERY
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Se `RED_LOCKED=true`, não alterar o teste. Marcar:
+
+```yaml
+RECOVERY_STATUS: IN_PROGRESS
+RECOVERY_RED_REOPEN_REQUIRED: true
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: REQUEST_REOPEN_RED
+```
+
+e apresentar:
 
 ```text
 RED REOPEN REQUIRED
@@ -140,8 +227,7 @@ Motivo:
 <novo fato/finding>
 
 O que muda:
-- <delta de solução/SPEC se houver>
-- <delta do contrato RED>
+- <delta já documentado>
 
 Impacto:
 - invalida o red-tests.lock atual
@@ -161,26 +247,22 @@ Após `REOPEN RED`:
 RED_REOPEN_COUNT: +1
 RED_APPROVED: true
 RED_LOCKED: false
+RECOVERY_RED_REOPEN_REQUIRED: false
+RECOVERY_STATUS: RESOLVED
 CURRENT_STATE: RED_REVIEW
 NEXT_ACTION: APPLY_APPROVED_RED_REOPEN_DELTA
 NEXT_MODEL_ROLE: EXECUTOR
 ```
 
-A revisão proposta do contrato RED fica no recovery. Após autorização, skill 07 aplica somente o delta aprovado
-e segue para nova `RED_EXECUTION`.
+A skill 07 aplica somente o delta aprovado e segue para nova `RED_EXECUTION`.
 
-### Caso C — bloqueado por decisão humana
+## Reaprovação antes de reabrir RED
 
-Se requisito continuar ambíguo:
-
-```text
-DECISION=BLOCKED_FOR_HUMAN_DECISION
-CURRENT_STATE=JUDGE_RECOVERY
-```
-
-Perguntar somente o ponto necessário.
+Quando recovery tornou solução/SPEC stale, **reaprovar primeiro os contratos superiores** usando os gates
+existentes. `06-spec-plano.md` verifica `RECOVERY_RED_REOPEN_REQUIRED`; depois de `APROVAR SPEC/PLANO`,
+retorna a esta skill para solicitar `REOPEN RED` quando necessário.
 
 ## Regra de modelo
 
 `JUDGE_RECOVERY` exige `HEAD_STRONG`. Em routing manual, não continuar com Judge/Executor.
-Quando decisão exigir implementação ou nova execução RED, parar para handoff `EXECUTOR`.
+Quando o recovery terminar em implementação ou RED, parar para handoff `EXECUTOR` quando necessário.
