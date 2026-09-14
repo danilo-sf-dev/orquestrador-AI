@@ -17,11 +17,36 @@ writes:
 ## Quando usar
 Uma história/bug altera ou depende de dois ou mais repositórios que se chamam ou compartilham contrato.
 
-## Canonical feature memory
-Criar uma única pasta canônica `.ai/features/<JIRA-ID>/`. Nos demais repos, criar `FEATURE-LINK.md` apontando para ela.
+## Regra principal
+Este cenário **não define pipeline próprio**. Estados, gates, papéis e transições vêm exclusivamente do
+`orquestrador.md` e da skill atual.
 
-## Contrato obrigatório
-No `STATE.md` e SPEC:
+## Memória canônica
+Criar uma única pasta canônica:
+
+```text
+.ai/features/<JIRA-ID>/
+```
+
+Nos demais repos, quando um ponteiro local for necessário, usar somente:
+
+```text
+.ai/FEATURE-LINK.md
+```
+
+Nunca criar `FEATURE-LINK.md` versionado fora de `.ai/` por padrão.
+
+No `STATE.md`, manter apenas checkpoint curto:
+
+```text
+CANONICAL_HOME:
+REPOSITORIES: []
+```
+
+Não duplicar schemas, erros, auth, compatibilidade ou detalhes de contrato no STATE.
+
+## Contrato cross-repo
+Detalhes pertencem à SPEC/plano:
 
 ```text
 SOURCE_REPO:
@@ -37,23 +62,17 @@ DEPLOY_ORDER:
 ROLLBACK:
 ```
 
-## Discovery
-ECONOMICAL rastreia ambos os lados antes do HEAD decidir.
-
-## RED
-Criar testes de cada lado do contrato quando possível. Selar todos os arquivos RED envolvidos.
-
-## Implementação
-EXECUTOR pode alternar repos, mas deve atualizar um único `STATE.md` canônico.
-
-## Judge
-Julgar o fluxo end-to-end conceitual e a compatibilidade, não apenas “repo A passa testes”. Para risco alto, usar dois juízes independentes.
-
-## Commit
-Aplicar `skills/12-commit-workflow.md`. Validar todos os repos antes do primeiro commit no fluxo seguro, criar um commit por repo, respeitar contrato/compatibilidade/ordem e registrar todos os SHAs na memória canônica.
-
-## Archive
-Indexar a feature em cada repo por ponteiro e na memória canônica por endpoints/contratos/classes de ambos.
+## Delta deste cenário
+- Discovery rastreia ambos os lados do contrato antes de fechar requisitos/design.
+- Requirement Analysis verifica compatibilidade, consumidores e deploy coupling aplicáveis.
+- RED cria verificações dos dois lados quando tecnicamente possível.
+- Implementação pode alternar repos, preservando um único `STATE.md` canônico.
+- Judge avalia compatibilidade/end-to-end conceitual, não apenas testes isolados de um repo.
+- Para risco alto, usar `JUDGE_SECONDARY` como reforço independente.
+- Commit trata cada repo separadamente, preservando contrato, compatibilidade e ordem.
+- Archive indexa endpoints/contratos/classes de ambos na memória canônica; ponteiros locais continuam em `.ai/`.
 
 ## Regra de testes unitários
-Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras, contratos ou riscos.
+Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes
+não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com
+critérios, regras, contratos ou riscos.
