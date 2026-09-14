@@ -17,6 +17,7 @@ reads:
   - 06-implementation-summary.md
   - 07-green-evidence.md
   - 08-judgement.md
+  - recovery/judge-recovery-*.md_if_exists
   - 09-qa-tests.md_if_exists
   - 10-qa-guide.md_if_exists
   - delivery/commit.md_if_exists
@@ -53,10 +54,16 @@ atual `03-spec.md`. Seu conteúdo pode ser lido como memória revalidável, mas 
 
 ## Pré-condições
 - Judge aprovado;
-- QA resolvido conforme o fluxo (`STANDARD_GATED`: aprovado; QUICK: aprovado ou `QA_NOT_REQUIRED_WITH_REASON`);
+- QA resolvido conforme o fluxo (`STANDARD_GATED`: aprovado; QUICK: aprovado ou `NOT_REQUIRED_WITH_REASON`);
 - commit concluído, externo ou dispensado explicitamente; `COMMIT_STATUS=DEFERRED` mantém archive bloqueado;
 - PR resolvido como `DESCRIPTION_READY`, `NOT_REQUESTED` ou `SKIPPED_BY_USER` conforme política vigente;
 - usuário autorizou `ARQUIVAR`.
+
+## Recovery e memória
+
+Se houver `recovery/judge-recovery-*.md`, ler apenas os recoveries relevantes ao resultado final. Promover
+para o archive somente fatos novos, decisões e riscos que continuem verdadeiros após a correção. Não
+arquivar tentativas intermediárias nem findings já invalidados sem valor histórico.
 
 ## `11-archive.md`
 Manter conciso e pesquisável:
@@ -83,12 +90,22 @@ RELATED_FEATURES:
 SEARCH_TAGS:
 ```
 
-Não copiar `01-requirements.md`, `02-design.md` ou SPEC integralmente. Extrair somente conhecimento
-reutilizável: decisão material, contrato, boundary, regra de negócio ou padrão comprovado.
+Não copiar `01-requirements.md`, `02-design.md`, SPEC ou recovery integralmente. Extrair somente
+conhecimento reutilizável: decisão material, contrato, boundary, regra de negócio, fato descoberto em
+recovery ou padrão comprovado.
 
 ## `STATE.md`
 Manter checkpoint final mínimo: `LIFECYCLE=DONE`, estados finais de Judge/QA/Commit/PR e referências
 curtas. Decisões, contratos, riscos e histórico útil ficam em `11-archive.md`.
+
+Ao concluir:
+
+```yaml
+LIFECYCLE: DONE
+CURRENT_STATE: READY_TO_ARCHIVE
+NEXT_ACTION: NONE
+LAST_COMPLETED_PHASE: ARCHIVE
+```
 
 ## `FEATURE_INDEX.md`
 Adicionar entrada pequena pesquisável por Jira, endpoint, classe, domínio, integração, repo e tag.
