@@ -61,15 +61,25 @@ Após recuperar memória, verificar se o código atual ainda corresponde a endpo
 
 ## Saída em `STATE.md`
 
+Manter somente ponteiros/checkpoints curtos. Detalhes recuperados permanecem nos archives relacionados ou no discovery.
+
 ```text
 RELATED_FEATURES:
 - JIRA-....
-MEMORY_REUSED:
-- ...
-STALE_RISKS:
-- ...
-DELTA_TO_VALIDATE:
-- ...
+PENDING:
+- revalidar <delta realmente necessário>
+```
+
+Não transformar `STATE.md` em inventário de `MEMORY_REUSED`, riscos detalhados ou histórico de feature.
+
+## Transição obrigatória
+
+Ao concluir:
+
+```yaml
+CURRENT_STATE: DISCOVERY
+NEXT_ACTION: INVESTIGATE_RELEVANT_FLOW
+NEXT_MODEL_ROLE: ECONOMICAL
 ```
 
 ## Regra
