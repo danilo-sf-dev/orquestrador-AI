@@ -26,10 +26,27 @@ Ser o bootstrap mínimo do fluxo orquestrador: resolver feature, confirmar os bi
 - `EXECUTOR`: GPT-5.6 Luna Pro
 - `ECONOMICAL`: DeepSeek V4 Flash 0731
 - `MULTIMODAL`: Gemini 3.7 Flash
-- `JUDGE_PRIMARY`: DeepSeek V4 Pro 0813 em contexto novo/read-only
+- `JUDGE_PRIMARY`: DeepSeek V4 Pro 0813 em modo read-only/evidence-isolated
 - `JUDGE_SECONDARY`: Gemini 3.7 Flash ou outro confirmado
 
 Esses nomes são defaults do bootstrap, não configuração persistente do projeto.
+
+## Política de contexto da sessão
+
+O modo padrão do Orquestrador é **um chat/sessão por Jira/feature**, com troca de modelo dentro da mesma conversa quando o papel muda.
+
+```text
+MODEL_SWITCH   = trocar modelo/papel e continuar no mesmo chat
+FRESH_CONTEXT  = abrir nova conversa/contexto de forma explícita
+```
+
+Regras:
+
+- `MODEL_SWITCH` é o padrão;
+- mudança de papel/modelo **não** implica novo chat;
+- `FRESH_CONTEXT` é excepcional e só deve ser usado quando houver motivo explícito, como contexto poluído, loop grande, auditoria independente ou escolha do usuário;
+- o Judge continua read-only e evidence-isolated mesmo no mesmo chat: histórico anterior não vale como evidência e conclusões do executor devem ser ignoradas;
+- quando `FRESH_CONTEXT` for escolhido, usar `templates/handoff-packet.md` com o pacote mínimo permitido.
 
 ## Passo 1 — Resolver feature antes de pedir Jira
 
@@ -53,6 +70,7 @@ Mostrar o preset/runtime atual e perguntar se deve ser usado ou alterado.
 Confirmar também:
 
 - `ROUTING_MODE=automatic|manual`;
+- contexto padrão da sessão: `MODEL_SWITCH` no mesmo chat;
 - orçamento default: `US$40/mês`, alvo `US$8/feature`, warning `US$10`.
 
 ### Regra de sessão
@@ -121,7 +139,7 @@ SELECTED_JIRA=<id|none>
 NEXT_ACTION=<ação>
 ```
 
-## Regra obrigatória de handoff manual
+## Regra obrigatória de troca manual de modelo
 
 Se `ROUTING_MODE=manual`, nenhuma fase pode começar apenas porque `NEXT_ACTION` aponta para ela.
 
@@ -140,6 +158,8 @@ NEXT_MODEL_ROLE=<required_role>
 
 Exibir o `PHASE BANNER` definido no `orquestrador.md`, solicitar a troca manual e **parar**.
 
+Por padrão, essa troca é um `MODEL_SWITCH`: o usuário seleciona o novo modelo **no mesmo chat**. Não pedir nova conversa apenas porque o papel mudou.
+
 Somente após confirmação explícita do usuário:
 
 ```text
@@ -151,6 +171,8 @@ MODEL_HANDOFF_REQUIRED=false
 Aí sim carregar a skill.
 
 Nunca continuar em `ECONOMICAL` para uma fase `HEAD_STRONG` ou `EXECUTOR`; nunca continuar em `EXECUTOR` para `JUDGE_PRIMARY`.
+
+Se houver necessidade explícita de isolamento, indicar `FRESH_CONTEXT` separadamente e gerar o handoff mínimo. `MODEL_HANDOFF_REQUIRED` sozinho nunca significa abrir novo chat.
 
 ## Contrato de nomes canônicos
 
