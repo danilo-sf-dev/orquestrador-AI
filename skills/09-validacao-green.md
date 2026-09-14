@@ -75,23 +75,49 @@ GREEN_STATUS=INVALID_GREEN
 REASON=locked test modified
 ```
 
-Não corrigir o lock para acomodar a alteração.
+Não corrigir o lock para acomodar a alteração. Registrar recovery dirigido:
 
-Se houver falha obrigatória:
-
-```text
-GREEN_STATUS=FAIL
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: GREEN_VALIDATION
+RECOVERY_CLASS: RED_CONTRACT_DEFECT
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
-Não avançar para Judge até corrigir implementação ou acionar recovery apropriado.
+## GREEN FAIL
+
+Se houver falha obrigatória, registrar `GREEN_STATUS=FAIL` e classificar antes de rotear:
+
+- se contrato/RED/lock continuam válidos e a falha é de implementação: `REWORK_IMPLEMENTATION`;
+- se a falha sugere contrato, RED, requisito ou descoberta incorretos: recovery dirigido.
+
+Implementação apenas:
+
+```yaml
+CURRENT_STATE: REWORK_IMPLEMENTATION
+NEXT_ACTION: FIX_GREEN_FAILURE
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Contrato/RED em dúvida:
+
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: GREEN_VALIDATION
+RECOVERY_CLASS: CONTRACT_MISMATCH
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+Não avançar para Judge em `FAIL` ou `INVALID_GREEN`.
 
 ## Se RED realmente precisar mudar
 
-```text
-REOPEN_RED_REQUIRED=true
-```
-
-Parar, passar por recovery, obter autorização explícita, gerar novo RED/lock e só então retomar.
+A skill GREEN não autoriza nem executa reabertura. Ela apenas registra o indício e passa pelo recovery.
+Somente o recovery pode demonstrar a necessidade e solicitar ao usuário exatamente `REOPEN RED`.
 
 ## `07-green-evidence.md`
 Registrar:
@@ -124,3 +150,14 @@ QUICK: CONTRACT_ITEM -> TEST/EVIDENCE -> RESULT -> SOURCE
 ```
 
 Sem evidência verificável, usar `MISSING` ou `PENDING_EXTERNAL`; nunca `PASS` por interpretação.
+
+## Transição quando GREEN passa
+
+```yaml
+GREEN_STATUS: PASS
+CURRENT_STATE: JUDGING
+NEXT_ACTION: JUDGE_DELIVERY
+NEXT_MODEL_ROLE: JUDGE_PRIMARY
+```
+
+Em `ROUTING_MODE=manual`, marcar `MODEL_HANDOFF_REQUIRED=true` e parar para troca antes de carregar o Judge.
