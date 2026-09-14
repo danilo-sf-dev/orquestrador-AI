@@ -9,13 +9,14 @@ NEXT_STATE:
 EXECUTION_LEVEL:
 ROLE:
 OBJECTIVE:
+CONTEXT_MODE: SAME_CHAT | FRESH_CONTEXT
 
 READ:
   -
 
 DO_NOT_READ:
   - documentacao-usuario/**
-  - chat_transcript
+  - chat_transcript_as_evidence
   - raw_discovery_logs
 
 CONSTRAINTS:
@@ -39,9 +40,12 @@ RECOVERY_DECISION: # somente em recovery
 
 ## Regras
 
+- `SAME_CHAT` é o padrão: trocar modelo/papel dentro da mesma conversa.
+- `FRESH_CONTEXT` é explícito e excepcional; não é consequência automática de mudar de modelo.
 - Apontar para artefatos; não copiar conteúdos longos sem necessidade.
 - Nunca incluir `documentacao-usuario/**`; o path é HUMAN_ONLY global.
-- Não incluir transcript do agente anterior.
+- Em `FRESH_CONTEXT`, não incluir transcript do agente anterior.
+- Em `SAME_CHAT`, o transcript já pode existir no harness, mas não deve ser relido/tratado como evidência quando a skill o proíbe.
 - Não incluir hipóteses rejeitadas, logs brutos ou buscas sem valor.
 - `READ` é derivado do frontmatter da skill destino.
 - `DO_NOT_READ` incorpora `forbidden_reads` da skill destino.
@@ -54,8 +58,11 @@ CURRENT_MODEL_ROLE:
 NEXT_MODEL_ROLE:
 ROUTING_MODE:
 MODEL_HANDOFF_REQUIRED:
+CONTEXT_MODE: SAME_CHAT | FRESH_CONTEXT
 CONFIRMATION_PHRASE:
 ```
+
+`MODEL_HANDOFF_REQUIRED=true` significa **trocar para o papel/modelo exigido**. Sozinho, não significa abrir novo chat.
 
 ## Recovery dirigido
 
