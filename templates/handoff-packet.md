@@ -9,7 +9,7 @@ NEXT_STATE:
 EXECUTION_LEVEL:
 ROLE:
 OBJECTIVE:
-CONTEXT_MODE: SAME_CHAT | FRESH_CONTEXT
+CONTEXT_MODE: SAME_CHAT | COMPACT_CONTEXT | FRESH_CONTEXT
 
 READ:
   -
@@ -41,11 +41,13 @@ RECOVERY_DECISION: # somente em recovery
 ## Regras
 
 - `SAME_CHAT` é o padrão: trocar modelo/papel dentro da mesma conversa.
-- `FRESH_CONTEXT` é explícito e excepcional; não é consequência automática de mudar de modelo.
+- `COMPACT_CONTEXT` mantém a mesma sessão, mas compacta/resume o histórico para reduzir contexto quando o runtime suportar (no VS Code, `/compact`).
+- `FRESH_CONTEXT` é explícito e excepcional; inicia nova sessão/contexto e não é consequência automática de mudar de modelo.
+- `/clear` no VS Code equivale a iniciar uma nova sessão; não usar como sinônimo de compactação.
 - Apontar para artefatos; não copiar conteúdos longos sem necessidade.
 - Nunca incluir `documentacao-usuario/**`; o path é HUMAN_ONLY global.
 - Em `FRESH_CONTEXT`, não incluir transcript do agente anterior.
-- Em `SAME_CHAT`, o transcript já pode existir no harness, mas não deve ser relido/tratado como evidência quando a skill o proíbe.
+- Em `SAME_CHAT`/`COMPACT_CONTEXT`, o transcript pode existir no harness, mas não deve ser tratado como evidência quando a skill o proíbe.
 - Não incluir hipóteses rejeitadas, logs brutos ou buscas sem valor.
 - `READ` é derivado do frontmatter da skill destino.
 - `DO_NOT_READ` incorpora `forbidden_reads` da skill destino.
@@ -58,7 +60,7 @@ CURRENT_MODEL_ROLE:
 NEXT_MODEL_ROLE:
 ROUTING_MODE:
 MODEL_HANDOFF_REQUIRED:
-CONTEXT_MODE: SAME_CHAT | FRESH_CONTEXT
+CONTEXT_MODE: SAME_CHAT | COMPACT_CONTEXT | FRESH_CONTEXT
 CONFIRMATION_PHRASE:
 ```
 
