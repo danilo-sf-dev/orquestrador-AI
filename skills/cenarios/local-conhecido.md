@@ -17,15 +17,21 @@ writes:
 ## Quando usar
 O Jira já informa endpoint/controller/componente e o código confirma claramente o ponto de atuação.
 
-## Otimização
-1. Memory lookup.
-2. Discovery curto e dirigido apenas para validar dependências e testes.
-3. Pular entrevista se não houver ambiguidade.
-4. Se a solução for trivial e não houver decisão arquitetural, HEAD ainda revisa a proposta de solução de forma curta antes do gate.
-5. Continuar SPEC/plano -> RED -> GO -> GREEN -> Judge -> QA -> Commit -> Archive.
+## Regra principal
+Este cenário **não define pipeline próprio**. Estados, gates, papéis e transições vêm exclusivamente do
+`orquestrador.md` e da skill atual.
+
+## Delta deste cenário
+1. Fazer Memory Lookup normalmente quando o fluxo exigir.
+2. Discovery curto e dirigido para validar dependências, comportamento atual e testes relacionados.
+3. Pular entrevista quando não houver `OPEN_QUESTION` bloqueante.
+4. Manter Requirement Analysis e Senior Solution Check curtos quando o contrato já estiver claro.
+5. Não remover `APROVAR SOLUÇÃO`, `APROVAR SPEC/PLANO`, `APROVAR RED` ou `GO` do fluxo COMUM.
 
 ## Objetivo
-Economizar input sem pular gates de qualidade.
+Economizar input por conhecimento do ponto de alteração, sem pular controles de qualidade.
 
 ## Regra de testes unitários
-Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras, contratos ou riscos.
+Os testes RED devem incluir happy path e **edge cases aplicáveis**. Edge cases relevantes não cobertos
+precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras,
+contratos ou riscos.
