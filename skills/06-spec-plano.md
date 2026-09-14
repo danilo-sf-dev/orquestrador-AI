@@ -12,6 +12,7 @@ reads:
   - 02-design.md
   - 02-solution.md
   - approved_human_decisions
+  - recovery/judge-recovery-<N>.md_if_recovery_in_progress
 forbidden_reads:
   - chat_transcript
   - raw_discovery_logs
@@ -46,6 +47,14 @@ Jira + evidence + human decisions
 
 Nenhuma fase posterior pode redefinir silenciosamente requisito, assumption material ou decisão de
 design. Delta material volta à fase responsável.
+
+## Modo recovery
+
+Se `RECOVERY_STATUS=IN_PROGRESS` e `NEXT_ACTION=APPLY_RECOVERY_SPEC_PLAN_DELTA`, aplicar somente o delta
+documentado no recovery atual sobre SPEC/plano existentes. Não reescrever contrato não afetado nem
+reabrir decisões já válidas.
+
+A SPEC/plano corrigidos passam pelo mesmo gate `APROVAR SPEC/PLANO`.
 
 ## Estrutura obrigatória de `03-spec.md`
 
@@ -157,8 +166,26 @@ Após aprovação:
 ```yaml
 SPEC_PLAN_APPROVED: true
 SPEC_STATUS: APPROVED
+```
+
+Se `RECOVERY_RED_REOPEN_REQUIRED=true`:
+
+```yaml
+RECOVERY_STATUS: IN_PROGRESS
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: REQUEST_REOPEN_RED
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+O recovery solicitará o gate exato `REOPEN RED`; esta skill não invalida o lock diretamente.
+
+Caso contrário:
+
+```yaml
+RECOVERY_STATUS: RESOLVED # somente se recovery estava em andamento
 CURRENT_STATE: RED_REVIEW
 NEXT_ACTION: DESIGN_RED
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
 ## Relação com memória anterior
