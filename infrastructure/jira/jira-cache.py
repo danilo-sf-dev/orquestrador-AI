@@ -7,7 +7,6 @@ import argparse
 import base64
 import html
 import json
-import os
 import re
 import sys
 import urllib.error
@@ -74,78 +73,28 @@ def placeholder(value: Any) -> bool:
     return any(marker in upper for marker in PLACEHOLDERS)
 
 
-def auth_from_template() -> tuple[str, str, str] | None:
+def resolve_auth() -> tuple[str, str, str]:
     if not AUTH_FILE.exists():
-        return None
+        raise JiraError(f"AUTH_NOT_CONFIGURED: missing {AUTH_FILE}")
     try:
-        jira = json.loads(AUTH_FILE.read_text(encoding="utf-8")).get("jira", {})
-    except Exception:
-        return None
+        data = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
+        jira = data.get("jira", {})
+    except Exception as exc:
+        raise JiraError(f"AUTH_INVALID_JSON: {AUTH_FILE}") from exc
+
     base = str(jira.get("baseUrl") or "").rstrip("/")
     email = str(jira.get("email") or "")
     token = str(jira.get("apiToken") or "")
+
     if any(placeholder(v) for v in (base, email, token)):
-        return None
-    return (base, email, token) if base.startswith("https://") else None
+        raise JiraError(f"AUTH_NOT_CONFIGURED: fill local values in {AUTH_FILE}")
+    if not base.startswith("https://"):
+        raise JiraError("AUTH_INVALID_BASE_URL: expected https://...")
+    return base, email, token
 
 
-def settings_candidates(explicit: str | None) -> list[Path]:
-    paths: list[Path] = []
-    if explicit:
-        paths.append(Path(explicit).expanduser())
-    if os.environ.get("JIRA_CLAUDE_SETTINGS"):
-        paths.append(Path(os.environ["JIRA_CLAUDE_SETTINGS"]).expanduser())
-    cwd = Path.cwd().resolve()
-    for parent in (cwd, *cwd.parents):
-        paths.append(parent / ".claude" / "settings.local.json")
-    seen, unique = set(), []
-    for path in paths:
-        if str(path) not in seen:
-            seen.add(str(path))
-            unique.append(path)
-    return unique
-
-
-def auth_from_settings(path: Path) -> tuple[str, str, str] | None:
-    if not path.exists():
-        return None
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        allowed = data.get("permissions", {}).get("allow", [])
-    except Exception:
-        return None
-    for entry in allowed if isinstance(allowed, list) else []:
-        if not isinstance(entry, str) or "curl" not in entry or "atlassian.net" not in entry:
-            continue
-        user = re.search(r"(?:^|\s)(?:-u|--user)\s+(?:\"([^\"]+)\"|'([^']+)'|([^\s\)]+))", entry)
-        url = re.search(r"https://[A-Za-z0-9.-]+\.atlassian\.net", entry)
-        if not user or not url:
-            continue
-        credential = next((g for g in user.groups() if g is not None), "")
-        if ":" not in credential:
-            continue
-        email, token = credential.split(":", 1)
-        if email and token:
-            return url.group(0).rstrip("/"), email, token
-    return None
-
-
-def resolve_auth(settings: str | None) -> tuple[str, str, str]:
-    direct = auth_from_template()
-    if direct:
-        return direct
-    for path in settings_candidates(settings):
-        found = auth_from_settings(path)
-        if found:
-            return found
-    raise JiraError(
-        "AUTH_NOT_CONFIGURED: use local real values in infrastructure/jira/jira-auth.local.json "
-        "or pass --settings <project>/.claude/settings.local.json"
-    )
-
-
-def fetch(key: str, settings: str | None) -> dict[str, Any]:
-    base, email, token = resolve_auth(settings)
+def fetch(key: str) -> dict[str, Any]:
+    base, email, token = resolve_auth()
     basic = base64.b64encode(f"{email}:{token}".encode()).decode()
     url = f"{base}/rest/api/3/issue/{urllib.parse.quote(key)}?expand=renderedFields,names"
     request = urllib.request.Request(
@@ -157,10 +106,15 @@ def fetch(key: str, settings: str | None) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=30) as response:
             body, status = response.read(), response.status
     except urllib.error.HTTPError as exc:
-        labels = {401: "invalid or expired credential", 403: "no permission", 404: "issue not found or not visible"}
+        labels = {
+            401: "invalid or expired credential",
+            403: "no permission",
+            404: "issue not found or not visible",
+        }
         raise JiraError(f"HTTP_{exc.code}: {labels.get(exc.code, 'Jira request failed')}") from exc
     except urllib.error.URLError as exc:
         raise JiraError(f"NETWORK_ERROR: {exc.reason}") from exc
+
     if status != 200:
         raise JiraError(f"HTTP_{status}: unexpected Jira response")
     try:
@@ -188,7 +142,10 @@ def adf_text(node: Any) -> str:
         return "\n"
     content = node.get("content") if isinstance(node.get("content"), list) else []
     parts = [adf_text(x) for x in content]
-    block_types = {"doc", "paragraph", "heading", "blockquote", "listItem", "bulletList", "orderedList", "table", "tableRow", "tableCell", "codeBlock"}
+    block_types = {
+        "doc", "paragraph", "heading", "blockquote", "listItem", "bulletList",
+        "orderedList", "table", "tableRow", "tableCell", "codeBlock",
+    }
     sep = "\n" if node.get("type") in block_types else ""
     return sep.join(filter(None, parts)).strip()
 
@@ -209,6 +166,7 @@ def normalized(payload: dict[str, Any]) -> dict[str, Any]:
     status = fields.get("status") if isinstance(fields.get("status"), dict) else {}
     issue_type = fields.get("issuetype") if isinstance(fields.get("issuetype"), dict) else {}
     parent = fields.get("parent") if isinstance(fields.get("parent"), dict) else {}
+
     description = adf_text(fields.get("description"))
     if not description and isinstance(rendered.get("description"), str):
         description = plain(rendered["description"])
@@ -219,7 +177,13 @@ def normalized(payload: dict[str, Any]) -> dict[str, Any]:
         for item in comment_block.get("comments", []):
             if isinstance(item, dict):
                 author = item.get("author") if isinstance(item.get("author"), dict) else {}
-                comments.append({"author": author.get("displayName"), "created": item.get("created"), "body": adf_text(item.get("body"))})
+                comments.append(
+                    {
+                        "author": author.get("displayName"),
+                        "created": item.get("created"),
+                        "body": adf_text(item.get("body")),
+                    }
+                )
 
     custom = []
     for field_id, raw in fields.items():
@@ -228,7 +192,9 @@ def normalized(payload: dict[str, Any]) -> dict[str, Any]:
         value = rendered.get(field_id)
         if value in (None, "", [], {}):
             value = raw
-        custom.append({"id": field_id, "name": names.get(field_id) or field_id, "value": plain(value)})
+        custom.append(
+            {"id": field_id, "name": names.get(field_id) or field_id, "value": plain(value)}
+        )
 
     return {
         "key": payload.get("key"),
@@ -238,21 +204,31 @@ def normalized(payload: dict[str, Any]) -> dict[str, Any]:
         "parent": parent.get("key"),
         "description": description,
         "comments": comments,
-        "subtasks": [{"key": x.get("key"), "summary": (x.get("fields") or {}).get("summary")} for x in fields.get("subtasks", []) if isinstance(x, dict)],
+        "subtasks": [
+            {"key": x.get("key"), "summary": (x.get("fields") or {}).get("summary")}
+            for x in fields.get("subtasks", [])
+            if isinstance(x, dict)
+        ],
         "labels": fields.get("labels") if isinstance(fields.get("labels"), list) else [],
         "customFields": custom,
     }
 
 
 def emit(payload: Any, pretty: bool) -> None:
-    print(json.dumps(payload, ensure_ascii=False, indent=2 if pretty else None, separators=None if pretty else (",", ":")))
+    print(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            indent=2 if pretty else None,
+            separators=None if pretty else (",", ":"),
+        )
+    )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Canonical Jira cache helper")
     parser.add_argument("command", choices=("read", "fetch", "refresh", "validate"))
     parser.add_argument("issue_key")
-    parser.add_argument("--settings", help="Project .claude/settings.local.json; used only on cache miss")
     parser.add_argument("--pretty", action="store_true")
     args = parser.parse_args()
     key = key_of(args.issue_key)
@@ -271,10 +247,11 @@ def main() -> int:
             except JiraError as exc:
                 if not str(exc).startswith(("CACHE_MISS:", "CACHE_INVALID_JSON:")):
                     raise
-                payload = fetch(key, args.settings)
+                payload = fetch(key)
             emit(normalized(payload), args.pretty)
             return 0
-        payload = fetch(key, args.settings)
+
+        payload = fetch(key)
         emit(normalized(payload), args.pretty)
         return 0
     except JiraError as exc:
