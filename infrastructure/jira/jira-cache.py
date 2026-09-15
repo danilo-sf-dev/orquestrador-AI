@@ -7,6 +7,7 @@ import argparse
 import base64
 import html
 import json
+import os
 import re
 import sys
 import urllib.error
@@ -16,8 +17,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = ROOT.parent.parent
 AUTH_FILE = ROOT / "jira-auth.local.json"
-PLACEHOLDERS = ("SEU_", "YOUR_", "<", "PLACEHOLDER")
+ENV_FILE = PROJECT_ROOT / ".env"
+ENV_REF = re.compile(r"^\$\{([A-Za-z_][A-Za-z0-9_]*)\}$")
 
 
 class JiraError(RuntimeError):
@@ -66,28 +69,55 @@ def write_cache(key: str, payload: dict[str, Any]) -> None:
     cache_file(key).write_text(compact(payload), encoding="utf-8")
 
 
-def placeholder(value: Any) -> bool:
-    if not isinstance(value, str) or not value.strip():
-        return True
-    upper = value.upper()
-    return any(marker in upper for marker in PLACEHOLDERS)
+def load_dotenv(path: Path = ENV_FILE) -> None:
+    """Load simple KEY=VALUE pairs without external dependencies. Existing process env wins."""
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].strip()
+        if "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        if key:
+            os.environ.setdefault(key, value)
+
+
+def resolve_env_ref(value: Any, field_name: str) -> str:
+    text = str(value or "").strip()
+    match = ENV_REF.fullmatch(text)
+    if not match:
+        raise JiraError(
+            f"AUTH_CONFIG_INVALID: jira-auth.local.json field {field_name} must reference an env var like ${{JIRA_EMAIL}}"
+        )
+    env_name = match.group(1)
+    resolved = os.environ.get(env_name, "").strip()
+    if not resolved:
+        raise JiraError(f"AUTH_ENV_MISSING: {env_name}: configure {ENV_FILE}")
+    return resolved
 
 
 def resolve_auth() -> tuple[str, str, str]:
     if not AUTH_FILE.exists():
         raise JiraError(f"AUTH_NOT_CONFIGURED: missing {AUTH_FILE}")
+    load_dotenv()
     try:
         data = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
         jira = data.get("jira", {})
     except Exception as exc:
         raise JiraError(f"AUTH_INVALID_JSON: {AUTH_FILE}") from exc
 
-    base = str(jira.get("baseUrl") or "").rstrip("/")
-    email = str(jira.get("email") or "")
-    token = str(jira.get("apiToken") or "")
+    base = resolve_env_ref(jira.get("baseUrl"), "baseUrl").rstrip("/")
+    email = resolve_env_ref(jira.get("email"), "email")
+    token = resolve_env_ref(jira.get("apiToken"), "apiToken")
 
-    if any(placeholder(v) for v in (base, email, token)):
-        raise JiraError(f"AUTH_NOT_CONFIGURED: fill local values in {AUTH_FILE}")
     if not base.startswith("https://"):
         raise JiraError("AUTH_INVALID_BASE_URL: expected https://...")
     return base, email, token
