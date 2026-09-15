@@ -10,7 +10,6 @@ reads:
   - infrastructure/jira/jira-cache.py
   - infrastructure/jira/<ISSUE-KEY>.json
   - infrastructure/jira/jira-auth.local.json
-  - <projeto>/.claude/settings.local.json
 
 writes:
   - infrastructure/jira/<ISSUE-KEY>.json
@@ -66,7 +65,7 @@ receber ISSUE_KEY
    ↓
 cache infrastructure/jira/<ISSUE_KEY>.json existe e é válido?
    ├─ SIM -> READ canônico -> contexto normalizado
-   └─ NÃO -> AUTH -> FETCH canônico -> WRITE single-line -> READ canônico
+   └─ NÃO -> AUTH jira-auth.local.json -> FETCH canônico -> WRITE single-line -> READ canônico
 ```
 
 Cache válido sempre vence nova chamada ao Jira.
@@ -81,7 +80,7 @@ python infrastructure/jira/jira-cache.py read SGJA-123
 
 Esse comando:
 
-- executa `JSON.parse` equivalente via parser nativo;
+- interpreta o JSON com parser nativo;
 - normaliza automaticamente cache JSON válido que tenha sido salvo com pretty-print;
 - mantém o arquivo físico como **MINIFIED SINGLE-LINE JSON**;
 - extrai campos úteis;
@@ -96,18 +95,12 @@ python infrastructure/jira/jira-cache.py fetch SGJA-123
 
 `fetch` é cache-first. Se o cache existir e for válido, não autentica e não chama Jira.
 
-Quando o projeto que possui a permissão Claude estiver fora do cwd atual, usar:
-
-```bash
-python infrastructure/jira/jira-cache.py fetch SGJA-123 --settings "<projeto>/.claude/settings.local.json"
-```
-
 ### Atualização explícita
 
 Somente quando o usuário pedir refresh/atualização:
 
 ```bash
-python infrastructure/jira/jira-cache.py refresh SGJA-123 --settings "<projeto>/.claude/settings.local.json"
+python infrastructure/jira/jira-cache.py refresh SGJA-123
 ```
 
 ### Validar/normalizar cache
@@ -179,14 +172,13 @@ A saída normalizada contém, quando disponíveis:
 
 ## Autenticação — somente em cache miss
 
-Prioridade:
+A única fonte canônica de autenticação é:
 
-1. usar `infrastructure/jira/jira-auth.local.json` se ele possuir valores reais locais;
-2. se o arquivo tiver placeholders, usar a permissão Jira já configurada em
-   `<projeto>/.claude/settings.local.json`;
-3. o caminho pode ser passado explicitamente com `--settings`.
+```text
+infrastructure/jira/jira-auth.local.json
+```
 
-A versão commitada de `jira-auth.local.json` é deliberadamente um template fake:
+Estrutura esperada:
 
 ```json
 {
@@ -198,7 +190,12 @@ A versão commitada de `jira-auth.local.json` é deliberadamente um template fak
 }
 ```
 
-É permitido versionar o template enquanto contiver somente placeholders.
+A versão commitada pode conter placeholders/fake values. No ambiente real, esse mesmo arquivo local pode
+conter os valores reais necessários para execução.
+
+Não procurar credenciais em `.claude/settings.local.json`, outros projetos, variáveis improvisadas ou
+arquivos antigos. Se `jira-auth.local.json` estiver ausente, inválido ou ainda com placeholders durante
+um cache miss, parar e informar somente esse caminho.
 
 ## Basic Auth obrigatório
 
@@ -229,7 +226,7 @@ Obrigatório:
 - nunca pedir que o usuário cole token no chat;
 - se um token aparecer em chat/print/log, considerar exposto e recomendar revogação.
 
-O helper lê credenciais somente em memória.
+O helper lê `jira-auth.local.json` somente em memória.
 
 ## Falhas
 
@@ -239,7 +236,7 @@ Classificar e parar; não trocar de runtime/estratégia por tentativa e erro.
 - `403`: usuário autenticado sem permissão;
 - `404`: issue inexistente ou não visível **com o mecanismo canônico**;
 - erro de rede: reportar conexão;
-- cache inválido: o helper tenta novo fetch somente em `fetch`; `read` deve reportar o problema.
+- cache inválido: `fetch` pode refazer a consulta; `read` deve reportar o problema.
 
 ## Normalização da URL
 
