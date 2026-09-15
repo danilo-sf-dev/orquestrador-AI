@@ -197,23 +197,51 @@ Não procurar credenciais em `.claude/settings.local.json`, outros projetos, var
 arquivos antigos. Se `jira-auth.local.json` estiver ausente, inválido ou ainda com placeholders durante
 um cache miss, parar e informar somente esse caminho.
 
-## Basic Auth obrigatório
+## Requisição canônica — formato validado em ambiente real
 
-Quando usar a API, o `Authorization` deve ser enviado **explicitamente na primeira requisição**:
+A chamada que esta skill deve reproduzir é equivalente ao request do Postman/curl que retornou `HTTP 200`
+no ambiente real.
 
-```text
-Authorization: Basic base64(email + ":" + token)
-Accept: application/json
-```
-
-Endpoint canônico:
+Valores vêm exclusivamente de `jira-auth.local.json` e permanecem apenas em memória.
 
 ```text
-GET <baseUrl>/rest/api/3/issue/<ISSUE-KEY>?expand=renderedFields,names
+METHOD: GET
+URL: <baseUrl>/rest/api/3/issue/<ISSUE-KEY>?expand=renderedFields,names
+HEADERS:
+  Accept: application/json
+  Authorization: Basic <base64(email + ":" + apiToken)>
 ```
 
-Não usar cliente que aguarde challenge HTTP antes de enviar Basic Auth. Esse comportamento já produziu
-`404` falso para issues acessíveis.
+Equivalente em curl, sem valores reais hardcoded:
+
+```bash
+AUTH_B64="$(printf '%s' "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64 | tr -d '\r\n')"
+
+curl --request GET \
+  --url "${JIRA_BASE_URL}/rest/api/3/issue/${ISSUE_KEY}?expand=renderedFields,names" \
+  --header "Accept: application/json" \
+  --header "Authorization: Basic ${AUTH_B64}"
+```
+
+O helper `jira-cache.py` implementa exatamente a mesma semântica: monta
+`base64(email:apiToken)` e envia o header `Authorization` já na **primeira requisição**.
+
+### Regra anti-regressão de autenticação
+
+É proibido substituir a requisição acima por mecanismo que aguarde challenge HTTP para só então enviar
+autenticação.
+
+Em particular, **não usar**:
+
+```text
+urllib.request.HTTPBasicAuthHandler
+HTTPPasswordMgrWithDefaultRealm
+cliente equivalente que espere 401/challenge antes de enviar Basic Auth
+```
+
+Esse padrão já gerou `404` falso para issues que retornaram `200` no Postman/curl com o header explícito.
+
+Se o mecanismo canônico falhar, classificar o status e parar. Não tentar outra estratégia de autenticação.
 
 ## Segurança
 
