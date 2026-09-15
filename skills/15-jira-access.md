@@ -1,15 +1,19 @@
 ---
 name: jira-access
 description: >
-  Acessa uma issue do Jira a partir de uma URL ou issue key, usando
-  credenciais configuradas em infrastructure/jira/jira-auth.local.json.
+  Acessa issues do Jira com política cache-first e procedimento determinístico
+  de fetch, persistência single-line e leitura normalizada.
 preferred_model_role: ECONOMICAL
 context_loading: lazy
 
 reads:
+  - infrastructure/jira/jira-cache.py
+  - infrastructure/jira/<ISSUE-KEY>.json
   - infrastructure/jira/jira-auth.local.json
+  - <projeto>/.claude/settings.local.json
 
 writes:
+  - infrastructure/jira/<ISSUE-KEY>.json
   - jira_context_ephemeral
 
 forbidden_writes:
@@ -25,7 +29,7 @@ forbidden_writes:
 
 ## Objetivo
 
-Esta skill é a porta de entrada padrão para qualquer fluxo do orquestrador que comece por um card do Jira.
+Esta skill é a porta de entrada padrão para qualquer fluxo do orquestrador que comece por Jira.
 
 Ela recebe uma URL como:
 
@@ -39,26 +43,150 @@ ou diretamente:
 SGJA-123
 ```
 
-e deve:
+e deve entregar `JIRA_CONTEXT_READY=true` com contexto normalizado **efêmero**.
 
-1. extrair a issue key;
-2. carregar as credenciais/configuração local;
-3. consultar a API REST do Jira;
-4. interpretar o JSON retornado;
-5. gerar o contexto normalizado da issue;
-6. devolver contexto normalizado **efêmero** ao orquestrador;
-7. nunca criar `.ai/`, `STATE.md` ou `00-jira.md` nesta skill;
-8. nunca exibir, registrar ou persistir credencial real fora da chamada.
+## Regra principal — sem improvisação
 
-## Arquivo de autenticação
+Fetch, persistência e leitura do cache Jira são procedimentos determinísticos.
 
-Caminho esperado:
+O modelo **NÃO possui liberdade** para substituir o mecanismo oficial por `jq`, PowerShell, Node,
+Python ad-hoc, `HTTPBasicAuthHandler`, leitura visual do JSON bruto ou outra estratégia que considere
+equivalente.
+
+Usar obrigatoriamente:
 
 ```text
-infrastructure/jira/jira-auth.local.json
+infrastructure/jira/jira-cache.py
 ```
 
-A versão commitada no repositório é deliberadamente um **template fake**, por exemplo:
+## Fluxo canônico
+
+```text
+receber ISSUE_KEY
+   ↓
+cache infrastructure/jira/<ISSUE_KEY>.json existe e é válido?
+   ├─ SIM -> READ canônico -> contexto normalizado
+   └─ NÃO -> AUTH -> FETCH canônico -> WRITE single-line -> READ canônico
+```
+
+Cache válido sempre vence nova chamada ao Jira.
+
+## Comandos oficiais
+
+### Ler cache existente
+
+```bash
+python infrastructure/jira/jira-cache.py read SGJA-123
+```
+
+Esse comando:
+
+- executa `JSON.parse` equivalente via parser nativo;
+- normaliza automaticamente cache JSON válido que tenha sido salvo com pretty-print;
+- mantém o arquivo físico como **MINIFIED SINGLE-LINE JSON**;
+- extrai campos úteis;
+- converte ADF (`description`/comentários) para texto;
+- preserva custom fields não vazios na saída normalizada.
+
+### Buscar somente quando houver cache miss
+
+```bash
+python infrastructure/jira/jira-cache.py fetch SGJA-123
+```
+
+`fetch` é cache-first. Se o cache existir e for válido, não autentica e não chama Jira.
+
+Quando o projeto que possui a permissão Claude estiver fora do cwd atual, usar:
+
+```bash
+python infrastructure/jira/jira-cache.py fetch SGJA-123 --settings "<projeto>/.claude/settings.local.json"
+```
+
+### Atualização explícita
+
+Somente quando o usuário pedir refresh/atualização:
+
+```bash
+python infrastructure/jira/jira-cache.py refresh SGJA-123 --settings "<projeto>/.claude/settings.local.json"
+```
+
+### Validar/normalizar cache
+
+```bash
+python infrastructure/jira/jira-cache.py validate SGJA-123
+```
+
+## Contrato de persistência
+
+O cache oficial é:
+
+```text
+infrastructure/jira/<ISSUE-KEY>.json
+```
+
+Formato obrigatório:
+
+- resposta RAW do Jira;
+- JSON válido;
+- UTF-8;
+- minificado;
+- exatamente uma linha física;
+- sem indentação/pretty-print;
+- sem resumo;
+- sem reconstrução manual pela LLM;
+- sem mudança de schema.
+
+Exemplo conceitual:
+
+```json
+{"expand":"...","id":"...","key":"SGJA-123","fields":{...}}
+```
+
+Nunca salvar como:
+
+```json
+{
+  "key": "SGJA-123",
+  "fields": {}
+}
+```
+
+O helper usa serialização compacta para garantir esse formato.
+
+## Contrato de leitura
+
+Se `infrastructure/jira/<ISSUE-KEY>.json` existir:
+
+1. não procurar credencial;
+2. não chamar Jira;
+3. não abrir o RAW gigante como estratégia principal;
+4. não estudar outros JSONs antigos para descobrir o formato;
+5. não tentar `jq`, PowerShell, parser improvisado ou nova linguagem;
+6. executar o comando `read` oficial.
+
+A saída normalizada contém, quando disponíveis:
+
+- key;
+- summary;
+- status;
+- issue type;
+- parent;
+- description em texto;
+- comments em texto;
+- subtasks;
+- labels;
+- custom fields não vazios, com nome quando o Jira fornecer `names`.
+
+## Autenticação — somente em cache miss
+
+Prioridade:
+
+1. usar `infrastructure/jira/jira-auth.local.json` se ele possuir valores reais locais;
+2. se o arquivo tiver placeholders, usar a permissão Jira já configurada em
+   `<projeto>/.claude/settings.local.json`;
+3. o caminho pode ser passado explicitamente com `--settings`.
+
+A versão commitada de `jira-auth.local.json` é deliberadamente um template fake:
 
 ```json
 {
@@ -70,30 +198,52 @@ A versão commitada no repositório é deliberadamente um **template fake**, por
 }
 ```
 
-É permitido versionar esse template enquanto ele contiver somente placeholders/fake values.
+É permitido versionar o template enquanto contiver somente placeholders.
 
-Se o usuário preencher valores reais localmente para execução, essa modificação passa a ser sensível:
+## Basic Auth obrigatório
 
-- nunca stagear ou commitar os valores reais;
-- nunca copiar valores reais para memória, logs, QA, commit ou PR;
-- antes de commit, tratar qualquer diff real desse arquivo como segredo e excluí-lo do stage.
+Quando usar a API, o `Authorization` deve ser enviado **explicitamente na primeira requisição**:
 
-## Consulta da issue
-
-Depois de ler `baseUrl`, `email` e `apiToken`, montar a chamada equivalente a:
-
-```bash
-curl -sS \
-  -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
-  "${JIRA_BASE_URL}/rest/api/3/issue/${JIRA_ID}" \
-  -H "Accept: application/json"
+```text
+Authorization: Basic base64(email + ":" + token)
+Accept: application/json
 ```
 
-Os valores devem ser obtidos do arquivo. Nunca imprimir a linha final contendo credenciais reais.
+Endpoint canônico:
+
+```text
+GET <baseUrl>/rest/api/3/issue/<ISSUE-KEY>?expand=renderedFields,names
+```
+
+Não usar cliente que aguarde challenge HTTP antes de enviar Basic Auth. Esse comportamento já produziu
+`404` falso para issues acessíveis.
+
+## Segurança
+
+Obrigatório:
+
+- nunca imprimir `apiToken`;
+- nunca imprimir o header `Authorization`;
+- nunca persistir credencial em cache Jira;
+- nunca copiar credencial para `.ai/`, `STATE.md`, `00-jira.md`, logs, QA, commit ou PR;
+- nunca pedir que o usuário cole token no chat;
+- se um token aparecer em chat/print/log, considerar exposto e recomendar revogação.
+
+O helper lê credenciais somente em memória.
+
+## Falhas
+
+Classificar e parar; não trocar de runtime/estratégia por tentativa e erro.
+
+- `401`: credencial inválida/expirada;
+- `403`: usuário autenticado sem permissão;
+- `404`: issue inexistente ou não visível **com o mecanismo canônico**;
+- erro de rede: reportar conexão;
+- cache inválido: o helper tenta novo fetch somente em `fetch`; `read` deve reportar o problema.
 
 ## Normalização da URL
 
-Se o usuário fornecer:
+Se receber:
 
 ```text
 https://SEU-DOMINIO.atlassian.net/browse/SGJA-123
@@ -105,65 +255,26 @@ extrair:
 SGJA-123
 ```
 
-Se o usuário já fornecer `SGJA-123`, usar diretamente.
-
-## Dados que devem ser extraídos
-
-Quando disponíveis no payload do Jira:
-
-- issue key;
-- summary/título;
-- status;
-- issue type;
-- description;
-- acceptance criteria presentes na descrição/campos retornados;
-- subtasks;
-- issue links e dependências;
-- labels;
-- components;
-- assignee somente se for relevante para o fluxo;
-- metadados de anexos.
-
-Não transformar subtasks ou instruções técnicas automaticamente em Acceptance Criteria. Manter cada categoria separada.
+Se já receber `SGJA-123`, usar diretamente.
 
 ## Anexos e imagens
 
-O endpoint `/rest/api/3/issue/{id}` pode retornar metadados de anexos, mas esta skill não deve assumir que consegue interpretar o conteúdo visual.
+Metadados de anexos podem existir no payload.
 
-Se houver imagem ou diagrama relevante:
-
-1. registrar que existe anexo visual;
-2. não inventar o conteúdo;
-3. solicitar que o usuário forneça a imagem no chat, salvo se o runtime possuir capacidade específica e autorizada para baixar/ler o anexo.
-
-## Segurança
-
-Obrigatório:
-
-- nunca mostrar `apiToken` real;
-- nunca mostrar o valor completo de `email` junto com token real;
-- nunca copiar credenciais para `STATE.md`;
-- nunca copiar credenciais para `00-jira.md`;
-- nunca salvar credenciais reais em logs, artefatos, commits ou PRs;
-- nunca pedir que o usuário cole o token no chat se o arquivo configurável estiver ausente/incompleto.
-
-Se o arquivo não existir ou ainda contiver placeholders ao executar contra o Jira, parar o intake e informar apenas o caminho esperado:
-
-```text
-infrastructure/jira/jira-auth.local.json
-```
-
-## Falhas
-
-- `401`: autenticação inválida ou token expirado;
-- `403`: usuário autenticado sem permissão para a issue;
-- `404`: issue inexistente ou inacessível;
-- erro de rede: reportar falha de conexão e não inventar dados.
+Não inventar conteúdo visual. Se imagem/diagrama for material ao entendimento, solicitar o arquivo ao
+usuário, salvo quando o runtime possuir capacidade autorizada para obtê-lo.
 
 ## Saída esperada
 
-Produzir `JIRA_CONTEXT_READY=true` + contexto normalizado **somente em memória da sessão**.
+Produzir:
 
-A persistência pertence a `skills/01-intake-jira.md`, que primeiro protege `.ai/` no `.gitignore` e só então cria `.ai/features/<JIRA-ID>/STATE.md` e `00-jira.md`.
+```text
+JIRA_CONTEXT_READY=true
+```
 
-A saída nunca deve conter credenciais reais.
+mais o contexto normalizado **somente em memória da sessão**.
+
+A persistência da feature continua pertencendo a `skills/01-intake-jira.md`, que protege `.ai/` no
+`.gitignore` antes de criar `STATE.md` e `00-jira.md`.
+
+O cache RAW em `infrastructure/jira/<ISSUE-KEY>.json` pertence exclusivamente a esta skill/helper.
