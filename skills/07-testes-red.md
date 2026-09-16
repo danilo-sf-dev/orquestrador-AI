@@ -6,7 +6,8 @@ context_loading: lazy
 reads:
   - STATE.md
   - 00-jira.md
-  - 03-prd.md
+  - 01-requirements.md
+  - 03-spec.md
   - 04-implementation-plan.md
   - source_code_relevant_read_only
   - existing_tests_relevant_only
@@ -21,7 +22,7 @@ forbidden_reads:
   - unrelated_source_files
 forbidden_writes:
   - production_code
-  - approved_prd
+  - approved_spec
   - approved_plan
 ---
 
@@ -48,19 +49,51 @@ RED_EXECUTION
 
 ### Pré-condição
 
-- solução aprovada;
-- PRD/plano aprovados;
-- papel atual `EXECUTOR`.
+```yaml
+SOLUTION_APPROVED: true
+SPEC_PLAN_APPROVED: true
+SPEC_STATUS: APPROVED
+BLOCKING_OPEN_QUESTIONS: 0
+```
+
+Papel atual: `EXECUTOR`.
+
+Se a SPEC contiver pergunta aberta bloqueante ou requisito sem origem, parar; RED não deve preencher
+lacuna de produto/negócio por inferência.
 
 ### Objetivo
 
-Produzir o **plano executável do RED** em `05-red-tests.md`, cobrindo happy path e edge cases aplicáveis, sem ainda editar os testes do repositório.
+Produzir o **plano executável do RED** em `05-red-tests.md`, cobrindo happy path e edge cases aplicáveis,
+sem ainda editar os testes do repositório.
+
+### Mechanical readiness gate
+
+Antes de pedir `APROVAR RED`, verificar mecanicamente a rastreabilidade:
+
+```text
+SPEC_APPROVED = true
+BLOCKING_OPEN_QUESTIONS = 0
+AC_TOTAL = <N>
+AC_WITH_VERIFICATION = <N>
+UNTRACED_TESTS = 0
+```
+
+Cada `AC-*` deve ter pelo menos uma evidência planejada:
+
+```text
+UNIT_TEST | INTEGRATION | STATIC_VERIFICATION | QA | EXTERNAL_VALIDATION
+```
+
+Para comportamento coberto por teste unitário, apontar o teste RED planejado. Para AC não unit-testable,
+registrar a evidência alternativa e justificativa; não inventar teste artificial apenas para obter 100%.
+
+`AC_WITH_VERIFICATION < AC_TOTAL` bloqueia o gate.
 
 ### Regras
 
 1. Ler somente código/testes relevantes em modo read-only.
-2. Mapear cada teste planejado para AC/regra/risco e para a unidade `PLAN-*`; incluir `DD-*` quando a
-   decisão arquitetural determinar o comportamento verificado.
+2. Mapear cada teste planejado para `R-*`, `AC-*`, risco e `PLAN-*`; incluir `DD-*` quando a decisão
+   arquitetural determinar o comportamento verificado.
 3. Identificar happy path e edge cases aplicáveis.
 4. Não criar edge cases artificiais.
 5. Para cada cenário, marcar `COVERED_PLANNED`, `NOT_APPLICABLE` ou `DEFERRED_WITH_REASON`.
@@ -68,6 +101,13 @@ Produzir o **plano executável do RED** em `05-red-tests.md`, cobrindo happy pat
 7. Não escrever código de produção.
 8. Não criar `red-tests.lock` neste estado.
 9. Não afirmar que RED foi comprovado antes de executar os testes.
+10. Teste sem origem em requisito/AC/risco/decisão aprovada não entra silenciosamente no RED.
+
+### Matriz mínima
+
+```text
+R-* -> AC-* -> PLAN-* -> TEST/OTHER_EVIDENCE -> STATUS
+```
 
 ### Gate
 
@@ -83,6 +123,7 @@ Após aprovação:
 RED_APPROVED: true
 CURRENT_STATE: RED_EXECUTION
 NEXT_ACTION: EXECUTE_RED
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
 ### Modo de reabertura já autorizado
@@ -110,13 +151,14 @@ CURRENT_STATE: RED_EXECUTION
 
 ### Objetivo
 
-Materializar exatamente o contrato aprovado em `05-red-tests.md`, executar os testes, comprovar a falha esperada e selar o lock.
+Materializar exatamente o contrato aprovado em `05-red-tests.md`, executar os testes, comprovar a falha
+esperada e selar o lock.
 
 ### Regras
 
 1. Criar/alterar somente arquivos de teste necessários ao RED aprovado.
 2. Não ampliar silenciosamente escopo, critérios ou matriz de testes.
-3. Cada teste novo deve corresponder a uma unidade `PLAN-*` e a uma origem aprovada; teste sem
+3. Cada teste novo deve corresponder a `R-*`/`AC-*`, `PLAN-*` e uma origem aprovada; teste sem
    rastreabilidade deve ser removido ou voltar para revisão.
 4. O RED deve falhar pelo motivo esperado para comportamento ainda não implementado.
 5. Se um teste passar inesperadamente, investigar antes de seguir:
@@ -126,16 +168,34 @@ Materializar exatamente o contrato aprovado em `05-red-tests.md`, executar os te
    - critério já está atendido.
 6. Nunca enfraquecer assert para fabricar RED/GREEN.
 7. Registrar em `05-red-tests.md` a evidência real da execução.
-8. Se durante a execução surgir uma descoberta que invalide o contrato aprovado, **parar**. Não redesenhar RED sozinho.
-9. Nesse caso emitir:
+8. Se durante a execução surgir descoberta que invalide ou coloque em dúvida requisito, SPEC/plano ou o próprio contrato RED, **parar**. Não redesenhar RED sozinho.
+9. Nesse caso registrar:
 
-```text
-RED_EXECUTION_BLOCKED
-REASON=NEW_DISCOVERY_OR_CONTRACT_MISMATCH
-NEXT_STATE=JUDGE_RECOVERY
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: RED_EXECUTION
+RECOVERY_CLASS: CONTRACT_MISMATCH
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
 10. Somente após RED válido gerar `red-tests.lock`.
+
+### Evidência RED
+
+Registrar por teste material:
+
+```text
+TEST_ID:
+REQUIREMENT: R-*
+AC: AC-*
+EXPECTED_RED_REASON:
+ACTUAL_RED_REASON:
+RESULT: EXPECTED_FAIL | UNEXPECTED_PASS | WRONG_FAILURE
+```
+
+`WRONG_FAILURE` e `UNEXPECTED_PASS` não podem ser tratados como RED comprovado.
 
 ### Lock
 
@@ -159,6 +219,7 @@ Depois:
 RED_LOCKED: true
 CURRENT_STATE: WAITING_GO
 NEXT_ACTION: REQUEST_GO
+NEXT_MODEL_ROLE: EXECUTOR
 ```
 
 ---
@@ -178,7 +239,8 @@ Cobrir quando aplicável:
 - mapping/serialização/conversões;
 - regressões adjacentes.
 
-Para risco de alta visibilidade em QA/E2E, registrar `QA_SURROGATE=true` quando tecnicamente possível. Se só puder ser provado integrado/E2E, usar `QA_ONLY` com justificativa.
+Para risco de alta visibilidade em QA/E2E, registrar `QA_SURROGATE=true` quando tecnicamente possível. Se
+só puder ser provado integrado/E2E, usar `QA_ONLY` com justificativa.
 
 ---
 
@@ -186,7 +248,7 @@ Para risco de alta visibilidade em QA/E2E, registrar `QA_SURROGATE=true` quando 
 
 Após `RED_LOCKED=true`, testes protegidos não podem ser alterados por implementação, GREEN ou rework normal.
 
-A única exceção é um fluxo formal de recuperação que termine em autorização humana explícita:
+A única exceção é fluxo formal de recuperação que termine em autorização humana explícita:
 
 ```text
 REOPEN RED

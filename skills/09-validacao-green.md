@@ -6,7 +6,10 @@ writes: [07-green-evidence.md, STATE.md]
 context_loading: lazy
 reads:
   - STATE.md
-  - 04-implementation-plan.md
+  - 01-requirements.md_if_exists
+  - 03-spec.md_if_exists
+  - 04-implementation-plan.md_if_exists
+  - quick_contract_if_flow_mode_quick
   - 05-red-tests.md
   - red-tests.lock
   - 06-implementation-summary.md
@@ -26,45 +29,135 @@ forbidden_writes:
 # Skill — Validação GREEN
 
 ## Objetivo
-Demonstrar que a implementação atende os testes selados sem alterar a especificação de teste para induzir aprovação.
+Demonstrar com evidência mecânica que a implementação atende ao contrato aprovado e aos testes selados
+sem alterar o contrato para induzir aprovação.
+
+No `STANDARD_GATED`, o contrato é a SPEC. No `QUICK_AUTOGO`, é o Quick Contract aprovado.
 
 ## Ordem
 1. Validar hashes do `red-tests.lock` antes dos testes.
 2. Compilar.
-3. Rodar os testes unitários RED aprovados, incluindo happy path e edge cases selados.
-4. Conferir que a matriz de edge cases aprovada continua representada pelos testes lockados.
-5. Confirmar rastreabilidade `AC/regra -> DD/PLAN -> teste -> resultado` para o escopo implementado.
-6. Rodar testes relacionados/regressão proporcional ao risco.
-7. Validar hashes novamente.
-8. Verificar `git diff` dos arquivos de teste selados.
+3. Rodar os testes RED aprovados, incluindo happy path e edge cases selados.
+4. Conferir que a matriz aprovada continua representada pelos testes lockados.
+5. Confirmar rastreabilidade do contrato para teste/evidência/resultado.
+6. Rodar regressão proporcional ao risco.
+7. Coletar contagens reais quando a ferramenta fornecer.
+8. Validar hashes novamente.
+9. Verificar `git diff` dos testes selados.
+
+## Mechanical GREEN gate
+
+`GREEN_STATUS=PASS` somente quando todos os checks obrigatórios aplicáveis estiverem satisfeitos:
+
+```text
+LOCK_BEFORE: VALID
+COMPILE: PASS | NOT_APPLICABLE_WITH_REASON
+RED_TESTS: PASS
+RELATED_REGRESSION: PASS | NOT_APPLICABLE_WITH_REASON
+UNEXPECTED_FAILURES: 0
+UNEXPECTED_SKIPPED: 0
+CONTRACT_WITH_EVIDENCE: <N>/<TOTAL>
+LOCK_AFTER: VALID
+LOCKED_TEST_DIFF: CLEAN
+```
+
+No STANDARD, `CONTRACT_WITH_EVIDENCE` usa `R/AC`. No QUICK, usa itens/comportamentos do Quick Contract.
+Não inferir números ausentes; registrar `NOT_REPORTED` quando a ferramenta não fornecer contagem.
+
+Evidência não unitária (`QA`, `INTEGRATION`, `STATIC_VERIFICATION`, `EXTERNAL_VALIDATION`) deve ficar
+`PENDING_EXTERNAL` até a fase responsável. Evidência futura não vira prova atual.
 
 ## Resultado inválido
-Se qualquer teste selado tiver sido modificado sem reabertura RED:
+Se teste selado foi modificado sem reabertura RED:
 
 ```text
 GREEN_STATUS=INVALID_GREEN
 REASON=locked test modified
 ```
 
-Não corrigir o lock para acomodar a alteração.
+Não corrigir o lock para acomodar a alteração. Registrar recovery dirigido:
 
-## Se o teste realmente precisar mudar
-Voltar à skill RED:
-
-```text
-REOPEN_RED_REQUIRED=true
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: GREEN_VALIDATION
+RECOVERY_CLASS: RED_CONTRACT_DEFECT
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
 ```
 
-Explicar motivo, obter aprovação, gerar novo lock, então retomar.
+## GREEN FAIL
+
+Se houver falha obrigatória, registrar `GREEN_STATUS=FAIL` e classificar antes de rotear:
+
+- se contrato/RED/lock continuam válidos e a falha é de implementação: `REWORK_IMPLEMENTATION`;
+- se a falha sugere contrato, RED, requisito ou descoberta incorretos: recovery dirigido.
+
+Implementação apenas:
+
+```yaml
+CURRENT_STATE: REWORK_IMPLEMENTATION
+NEXT_ACTION: FIX_GREEN_FAILURE
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Contrato/RED em dúvida:
+
+```yaml
+RECOVERY_STATUS: REQUIRED
+RECOVERY_SOURCE: GREEN_VALIDATION
+RECOVERY_CLASS: CONTRACT_MISMATCH
+CURRENT_STATE: JUDGE_RECOVERY
+NEXT_ACTION: ANALYZE_TARGETED_RECOVERY
+NEXT_MODEL_ROLE: HEAD_STRONG
+```
+
+Não avançar para Judge em `FAIL` ou `INVALID_GREEN`.
+
+## Se RED realmente precisar mudar
+
+A skill GREEN não autoriza nem executa reabertura. Ela apenas registra o indício e passa pelo recovery.
+Somente o recovery pode demonstrar a necessidade e solicitar ao usuário exatamente `REOPEN RED`.
 
 ## `07-green-evidence.md`
 Registrar:
-- comandos executados;
-- build status;
-- testes RED e resultados, separando happy path e edge cases;
-- edge cases cobertos e eventuais `NOT_APPLICABLE`/`DEFERRED_WITH_REASON`;
-- suite extra e resultados;
-- hashes verificados;
-- falhas restantes;
-- limitações (ex.: integração não disponível);
-- itens que QA ainda precisa validar.
+
+```text
+GREEN_STATUS:
+FLOW_MODE:
+LOCK_BEFORE:
+COMPILE:
+TEST_COMMANDS:
+TESTS_REPORTED:
+FAILURES:
+ERRORS:
+SKIPPED:
+UNEXPECTED_FAILURES:
+UNEXPECTED_SKIPPED:
+CONTRACT_EVIDENCE_MATRIX:
+RELATED_REGRESSION:
+LOCK_AFTER:
+LOCKED_TEST_DIFF:
+LIMITATIONS:
+QA_PENDING:
+```
+
+Matriz:
+
+```text
+STANDARD: R/AC -> TEST/EVIDENCE -> RESULT -> SOURCE
+QUICK: CONTRACT_ITEM -> TEST/EVIDENCE -> RESULT -> SOURCE
+```
+
+Sem evidência verificável, usar `MISSING` ou `PENDING_EXTERNAL`; nunca `PASS` por interpretação.
+
+## Transição quando GREEN passa
+
+```yaml
+GREEN_STATUS: PASS
+CURRENT_STATE: JUDGING
+NEXT_ACTION: JUDGE_DELIVERY
+NEXT_MODEL_ROLE: JUDGE_PRIMARY
+```
+
+Em `ROUTING_MODE=manual`, marcar `MODEL_HANDOFF_REQUIRED=true` e parar para troca antes de carregar o Judge.

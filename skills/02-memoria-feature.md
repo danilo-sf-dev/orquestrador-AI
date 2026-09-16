@@ -46,20 +46,40 @@ Ao encontrar uma feature relacionada:
 
 Se existirem registros antigos `11-commit.md` / `12-pull-request.md`, tratá-los como legado. Novas features usam `delivery/commit.md` e `delivery/pull-request.md`.
 
+## Legado PRD -> SPEC
+Features arquivadas em versões anteriores podem conter `03-prd.md`, `PRD_PLAN_REVIEW` ou `PRD_PLAN_APPROVED`.
+Esses nomes representam a nomenclatura anterior do contrato que hoje é modelado como SPEC + plano.
+Ao consultar memória antiga:
+
+- interpretar `03-prd.md` como predecessor da atual `03-spec.md`;
+- reaproveitar apenas decisões/contratos relevantes após revalidação;
+- não criar `03-prd.md` em novas features;
+- não persistir `PRD_PLAN_*` em estados novos.
+
 ## Revalidação
 Após recuperar memória, verificar se o código atual ainda corresponde a endpoints, classes, contratos e decisões reutilizadas.
 
 ## Saída em `STATE.md`
 
+Manter somente ponteiros/checkpoints curtos. Detalhes recuperados permanecem nos archives relacionados ou no discovery.
+
 ```text
 RELATED_FEATURES:
 - JIRA-....
-MEMORY_REUSED:
-- ...
-STALE_RISKS:
-- ...
-DELTA_TO_VALIDATE:
-- ...
+PENDING:
+- revalidar <delta realmente necessário>
+```
+
+Não transformar `STATE.md` em inventário de `MEMORY_REUSED`, riscos detalhados ou histórico de feature.
+
+## Transição obrigatória
+
+Ao concluir:
+
+```yaml
+CURRENT_STATE: DISCOVERY
+NEXT_ACTION: INVESTIGATE_RELEVANT_FLOW
+NEXT_MODEL_ROLE: ECONOMICAL
 ```
 
 ## Regra

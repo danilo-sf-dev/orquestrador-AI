@@ -10,12 +10,12 @@ preferred_model_role: EXECUTOR
 context_loading: lazy
 reads:
   - STATE.md
-  - 04-implementation-plan.md
+  - 04-implementation-plan.md_if_exists
   - red-tests.lock
   - 07-green-evidence.md
   - 08-judgement.md
-  - 09-qa-tests.md
-  - 10-qa-guide.md
+  - 09-qa-tests.md_if_exists
+  - 10-qa-guide.md_if_exists
   - git_status_diff_stage
   - project_commit_conventions
   - project_build_test_config
@@ -114,3 +114,25 @@ explícita própria. Nunca usar `git add .` cegamente em workspace com mudanças
 Persistir fatos em `delivery/commit.md` e atualizar `STATE.md` conforme a referência de registro. Ao
 final, informar por repositório: branch, grupos, intenção, arquivos, mensagens PT-BR/EN, validações,
 exclusões, SHAs reais e qualquer pendência para arquivamento.
+
+## Transição após o commit
+
+Quando `COMMIT_STATUS=COMMITTED | EXTERNAL | SKIPPED_BY_USER`, o commit está resolvido para fins de fluxo.
+
+Se o usuário pediu descrição de PR/MR:
+
+```yaml
+CURRENT_STATE: PR_DESCRIPTION
+NEXT_ACTION: GENERATE_PR_DESCRIPTION
+NEXT_MODEL_ROLE: EXECUTOR
+```
+
+Caso contrário:
+
+```yaml
+CURRENT_STATE: READY_TO_ARCHIVE
+NEXT_ACTION: REQUEST_ARCHIVE
+NEXT_MODEL_ROLE: ECONOMICAL
+```
+
+`COMMIT_STATUS=DEFERRED` mantém `CURRENT_STATE=COMMIT_REVIEW` e não satisfaz a pré-condição de arquivamento.
