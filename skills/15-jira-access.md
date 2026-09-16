@@ -2,7 +2,8 @@
 name: jira-access
 description: >
   Acessa issues do Jira com política cache-first e procedimento determinístico
-  de fetch, persistência single-line e leitura normalizada.
+  de fetch, persistência single-line e leitura normalizada, usando o fallback
+  local de settings somente quando a autenticação principal não estiver disponível.
 preferred_model_role: ECONOMICAL
 context_loading: lazy
 
@@ -10,6 +11,7 @@ reads:
   - infrastructure/jira/jira-cache.py
   - infrastructure/jira/<ISSUE-KEY>.json
   - infrastructure/jira/jira-auth.local.json
+  - skills/jira/jira-access-settings-local.md_if_primary_auth_unavailable
 
 forbidden_reads:
   - .env
@@ -61,6 +63,18 @@ Usar obrigatoriamente:
 ```text
 infrastructure/jira/jira-cache.py
 ```
+
+## Estratégia de acesso
+
+`15-jira-access.md` é a única entrada canônica do estado `JIRA_ACCESS`.
+O helper `jira-cache.py` continua sendo o mecanismo padrão, cache-first e
+determinístico. Quando a configuração principal não puder autenticar, usar sob
+demanda `skills/jira/jira-access-settings-local.md` como fallback de **leitura**.
+
+O fallback não cria uma nova fase, não repete o intake e deve devolver o mesmo
+contexto normalizado efêmero. Ele pode gravar somente o cache RAW em
+`infrastructure/jira/<ISSUE-KEY>.json`; não substitui a configuração principal
+nem transforma posse de credencial em autorização para alterar o Jira.
 
 ## Fluxo canônico
 
@@ -195,7 +209,9 @@ Regras:
 - o agente não deve abrir, imprimir, resumir ou copiar o conteúdo de `.env`;
 - `jira-cache.py` carrega `.env` mecanicamente apenas em cache miss/refresh;
 - variáveis já definidas no processo têm precedência sobre valores do `.env`;
-- não procurar credenciais em `.claude/settings.local.json`, outros projetos ou arquivos antigos.
+- não procurar credenciais em arquivos antigos ou projetos arbitrários;
+- usar `skills/jira/jira-access-settings-local.md` somente como fallback controlado desta skill,
+  quando a autenticação principal não estiver disponível; a credencial permanece apenas em memória.
 
 Se uma variável obrigatória estiver ausente, parar e informar somente o nome da variável/caminho esperado; nunca pedir o token no chat.
 
@@ -241,6 +257,10 @@ Esse padrão já gerou `404` falso para issues que retornaram `200` com o header
 
 Se o mecanismo canônico falhar, classificar o status e parar. Não tentar outra estratégia de autenticação.
 
+Quando a falha for de configuração/autenticação principal e o fallback controlado estiver disponível,
+executar o procedimento da skill de fallback uma única vez. Se ele também falhar, reportar o status sem
+expor credenciais e sem tentar outras fontes.
+
 ## Segurança
 
 Obrigatório:
@@ -252,6 +272,13 @@ Obrigatório:
 - nunca abrir `.env` no contexto da LLM;
 - nunca pedir que o usuário cole token no chat;
 - se token aparecer em chat/print/log, considerar exposto e recomendar revogação.
+
+## Regra de escrita
+
+Esta skill, o helper canônico e o fallback executam somente leitura (`GET`) e cache local. Uma
+credencial com permissão de escrita não concede autorização ao agente. Criar, atualizar, comentar ou
+transicionar uma issue exige solicitação explícita do usuário que identifique a ação, a issue e o
+conteúdo ou campos pretendidos; sem esses três elementos, não fazer chamada de mutação.
 
 ## Falhas
 

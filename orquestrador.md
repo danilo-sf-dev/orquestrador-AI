@@ -80,6 +80,12 @@ receber URL/ID Jira
 -> rotear para fluxo escolhido
 ```
 
+`15-jira-access.md` é a entrada única: usa a configuração por ambiente como padrão e, somente quando
+ela não estiver disponível, aplica `skills/jira/jira-access-settings-local.md` como fallback de leitura.
+Os dois caminhos devolvem o mesmo contexto e não criam uma segunda fase de intake. Acesso autenticado
+nunca autoriza escrita por si só: qualquer criação, atualização, comentário ou transição no Jira requer
+autorização explícita do usuário para a ação, issue e conteúdo/campos específicos.
+
 ## 4. PHASE BANNER / troca de modelo e contexto
 
 Antes de cada fase:
