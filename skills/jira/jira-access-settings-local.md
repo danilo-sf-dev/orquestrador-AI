@@ -8,7 +8,7 @@ reads:
   - <projeto>/.claude/settings.local.json
 
 writes:
-  - <orquestrador>/infrastructure/jira/<ISSUE-KEY>.json
+  - <orquestrador>/infrastructure/jira/<EPIC>/<SPRINT>/<ITEM>/<ISSUE-KEY>[TAG].json
 
 forbidden_writes:
   - credentials
@@ -50,8 +50,10 @@ Authorization: Basic <base64>
 6. Para cada resposta HTTP `200`, salvar o corpo JSON em:
 
 ```text
-infrastructure/jira/<ISSUE-KEY>.json
+infrastructure/jira/<EPIC>/<SPRINT>/<ITEM>/<ISSUE-KEY>[TAG].json
 ```
+
+seguindo os labels do contrato de persistência de `skills/15-jira-access.md`.
 
 7. Validar `key`, `fields.summary`, `fields.status.name`,
 `fields.issuetype.name` e `fields.parent.key`.
@@ -62,6 +64,32 @@ Usar o header `Authorization` explicitamente na primeira requisição. Não depe
 apenas de um cliente que aguarde um desafio HTTP para enviar o Basic Auth, pois
 isso não reproduziu o acesso que funcionou no Postman/curl.
 - NUNCA ESCREVER NO JIRA SEM A PERMISSAO DO USUARIO
+
+## Escrita — somente sob pedido explícito
+
+Por padrão o fallback é leitura (`GET`) e cache local. Escrever no Jira exige
+**solicitação explícita do usuário** com **ação + issue + conteúdo/campos**. Sem os
+três, não executar mutação.
+
+Confirmados os três, o procedimento é o mesmo da skill principal
+(`skills/15-jira-access.md`, seção “Regra de escrita / Procedimento canônico de
+mutação”), reutilizando a credencial resolvida aqui:
+
+```text
+METHOD: PUT
+URL: https://portoseguro.atlassian.net/rest/api/3/issue/<ISSUE-KEY>
+HEADERS:
+  Accept: application/json
+  Content-Type: application/json
+  Authorization: Basic <base64(email + ":" + token)>
+BODY: {"fields": { "<campo>": <valor> }}   # conteúdo rico usa ADF
+```
+
+Códigos esperados: `204` (atualização), `201` (comentário via
+`POST .../issue/<ISSUE-KEY>/comment`), `400` (payload inválido), `401`/`403`
+(sem permissão), `404` (issue não visível). Depois de gravar, revalidar com
+`python infrastructure/jira/jira-cache.py refresh <ISSUE-KEY>`. Nunca persistir
+credencial/header em logs, docs, QA, commit ou PR.
 
 ## Exemplo seguro
 

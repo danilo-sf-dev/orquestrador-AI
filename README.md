@@ -288,6 +288,26 @@ pipeline canônico do `orquestrador.md`, reduzindo drift e contexto.
 - `13-pull-request-workflow.md`: gera somente título/descrição para preenchimento manual; não cria PR/MR remoto.
 - depois do commit/descrição de PR, o estado aponta explicitamente para archive quando aplicável.
 
+## Capacidade on-demand: verificação pré-deploy
+
+`skills/21-verificacao-pre-deploy.md` é capacidade **on-demand**: não é estado, não entra na tabela de
+fases e não é acionada automaticamente. Roda somente com pedido explícito.
+
+Serve para reproduzir **antes do push/deploy** o que a esteira cobraria, para o bloqueio aparecer na
+máquina e não na pipeline compartilhada. O mecanismo é um script, não um roteiro manual:
+
+```bash
+python infrastructure/pre-deploy/pre-deploy-check.py --repo <REPO>
+```
+
+Descobre build, pipeline e arquivos de IaC em runtime (agnóstico de stack), roda a engine de IaC do
+Checkmarx, varre segredos versionados, resolve dependências e roda build+testes, devolvendo
+`OK | BLOQUEIA | PARCIAL`. Somente leitura sobre o repositório; Docker é opcional (sem ele, o passo
+fica `NAO_VERIFICADO`, nunca sucesso). Não altera código, manifesto, pipeline ou configuração.
+
+Referências lazy em `skills/references/pre-deploy/`: casos reais já resolvidos, mapa de scanners e
+equivalentes locais, hardening de IaC e remediação de SCA.
+
 ## Orçamento
 
 ```text

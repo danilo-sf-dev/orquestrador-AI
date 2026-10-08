@@ -72,6 +72,9 @@ confirmada.
 A skill `15-jira-access.md` recebe URL ou issue key, consulta o Jira usando credenciais locais e devolve
 contexto efêmero. Ela não cria `.ai`, `STATE.md` ou `00-jira.md`.
 
+Leitura é o padrão. Escrita (atualizar campos ou comentar uma issue) existe apenas quando **você** pede
+explicitamente, informando a ação, a issue e o conteúdo. Sem esse pedido, o agente não altera o Jira.
+
 Arquivo local esperado:
 
 ```text

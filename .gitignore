@@ -1,12 +1,8 @@
-# Local secrets
+### pastas ###
+/infrastructure/jira/*
+!/infrastructure/jira/jira-auth.local.json
+/infrastructure/gitlab/*
+!/infrastructure/gitlab/gitlab-auth.local.json
 .env
-.env.*
-!.env.example
 
-# Local feature memory
-.ai/
-**/.ai/
 
-# Jira local cache snapshots
-infrastructure/jira/*.json
-!infrastructure/jira/jira-auth.local.json

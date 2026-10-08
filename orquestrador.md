@@ -54,6 +54,11 @@ Não duplicar aqui regras detalhadas das skills.
 38. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
 39. `MODEL_ROLES_CONFIRMED_THIS_SESSION` deve ser resetado no início de cada nova sessão antes do bootstrap confirmar bindings atuais.
 40. **Legado PRD:** features antigas podem conter `03-prd.md`, `PRD_PLAN_REVIEW` e `PRD_PLAN_APPROVED`. Interpretar como predecessores históricos da SPEC/plan atuais; não usar PRD em novas features.
+41. `19-gitlab-access.md` é a entrada canônica para contexto GitLab e segue o mesmo modelo do Jira: helper determinístico, cache-first, leitura normalizada e fallback local controlado. É **capacidade on-demand** (não fase obrigatória); nenhum cenário exige carregá-la.
+42. Credenciais GitLab reais nunca entram em memória, logs, commit ou PR. `gitlab-auth.local.json` contém somente referências `${GITLAB_*}`; os valores ficam no `.env` local ignorado.
+43. Acesso GitLab autenticado é somente leitura. Criar MR, comentar, criar branch, aprovar ou alterar qualquer recurso exige solicitação explícita do usuário com ação, recurso e conteúdo/campos; posse de token com escopo `api` não é autorização.
+44. Jira e GitLab são acessados diretamente por HTTP/REST pelos helpers oficiais. MCP não faz parte do transporte, da autenticação ou do fluxo de cache de nenhuma das integrações.
+45. `21-verificacao-pre-deploy.md` é **capacidade on-demand**, não step do fluxo: não é estado, não entra na tabela de fases, não é acionada automaticamente e não altera código/manifesto/pipeline/configuração. Só roda por pedido explícito do usuário. É agnóstica: descobre gates, ferramentas e política de bloqueio em runtime, reproduz localmente o que for reproduzível (Docker opcional, nunca com credenciais montadas) e distingue achado de bloqueio. O que não puder ser verificado é `NAO_VERIFICADO`, nunca sucesso.
 
 ## 3. NEW e RESUME
 
@@ -84,7 +89,44 @@ receber URL/ID Jira
 ela não estiver disponível, aplica `skills/jira/jira-access-settings-local.md` como fallback de leitura.
 Os dois caminhos devolvem o mesmo contexto e não criam uma segunda fase de intake. Acesso autenticado
 nunca autoriza escrita por si só: qualquer criação, atualização, comentário ou transição no Jira requer
-autorização explícita do usuário para a ação, issue e conteúdo/campos específicos.
+autorização explícita do usuário para a ação, issue e conteúdo/campos específicos. Quando o usuário
+autoriza, o caminho de mutação está documentado na seção “Regra de escrita / Procedimento canônico de
+mutação” de `15-jira-access.md` (credencial via helper oficial, `PUT` de campos ou `POST` de comentário,
+confirmação por status HTTP e revalidação via `refresh`).
+
+### 3.1 Acesso GitLab (capacidade on-demand)
+
+O GitLab **não** é porta de entrada de fluxo e **não** substitui o Jira. É capacidade de contexto
+consultável em qualquer fase, pelo mesmo padrão do Jira:
+
+```text
+receber URL ou chave canônica GitLab
+-> skills/19-gitlab-access.md
+-> GITLAB_CONTEXT_READY=true
+-> contexto normalizado efêmero
+```
+
+Comando canônico:
+
+```bash
+python infrastructure/gitlab/gitlab-cache.py read grupo/projeto::merge_requests/42
+```
+
+Usar quando: o card referencia MR/projeto; `DISCOVERY` precisa de código, árvore, arquivos ou
+histórico; `SOLUTION_DESIGN` valida arquitetura existente; `COMMIT_REVIEW`/`PR_DESCRIPTION` conferem
+estado remoto. Fallback de leitura somente quando a auth principal não resolver:
+`skills/gitlab/gitlab-access-settings-local.md`.
+
+Regras: cache-first; sem `curl`/`jq` ad-hoc; `GET` apenas; mutação exige autorização explícita
+(ação + recurso + conteúdo).
+
+Para conferir um MR já publicado, usar `skills/20-gitlab-mr-monitor.md`: consulta somente o status
+e as notas disponíveis (`GET`), sem chamar `discussions`, sem analisar código e sem alterar o remoto.
+Aceita `atualize o status do merge <JIRA-ID>` ou um caminho `.../.ai/features/<JIRA-ID>/delivery`;
+quando existir, usa `pull-request-tracking.md` para obter projeto/IID. Nesse contexto, atualizar
+significa atualizar a consulta/relatorio local, nunca mudar o MR remoto.
+O Jira continua sendo a fonte do status da história; o GitLab informa apenas o status remoto do
+MR/PR e seus eventos disponíveis. `MERGED` no GitLab não encerra automaticamente uma feature Jira.
 
 ## 4. PHASE BANNER / troca de modelo e contexto
 
@@ -156,6 +198,35 @@ FRESH_CONTEXT
 | `PR_DESCRIPTION` | `13-pull-request-workflow.md` | `EXECUTOR` |
 | `READY_TO_ARCHIVE` | `14-arquivamento.md` | `ECONOMICAL` |
 | `QUICK_AUTOGO` | `16-quick-autogo.md` | `EXECUTOR` |
+
+Nota: `19-gitlab-access.md` é **capacidade on-demand** (papel `ECONOMICAL`) e não corresponde a um
+estado canônico da tabela. Qualquer estado pode consultá-la via
+`infrastructure/gitlab/gitlab-cache.py` quando precisar de contexto GitLab, mantendo o fluxo
+`STANDARD_GATED` inalterado.
+
+`20-gitlab-mr-monitor.md` também é capacidade on-demand para consultas explícitas de status/notas;
+não é etapa obrigatória nem autoriza qualquer operação remota de escrita.
+
+### 5.1 Verificação pré-deploy (capacidade on-demand)
+
+`21-verificacao-pre-deploy.md` é capacidade on-demand, **agnóstica de projeto e ferramenta**, e não
+corresponde a estado canônico da tabela. Executa um script que reproduz **antes do deploy** os gates
+que a esteira rodaria, evitando descobrir o bloqueio depois do push.
+
+```text
+receber pedido explícito ("rodar a verificacao", "checar vulnerabilidades",
+"a esteira bloqueou", "validar antes do deploy")
+-> skills/21-verificacao-pre-deploy.md
+-> python infrastructure/pre-deploy/pre-deploy-check.py --repo <REPO>
+-> PRE_DEPLOY_STATUS: OK | BLOQUEIA | PARCIAL
+```
+
+Regras: não é acionada automaticamente por nenhum estado; não altera código, manifesto, pipeline ou
+configuração (apenas relata achado + correção sugerida); descobre build, pipeline, ferramentas e
+política de bloqueio em runtime; usa Docker quando disponível para as engines reproduzíveis e marca
+`NAO_VERIFICADO` (nunca sucesso) quando não for possível. Se o achado exigir código do projeto, o
+retorno roteia para `REWORK_IMPLEMENTATION` normalmente; se exigir reabertura de contrato, para
+`JUDGE_RECOVERY`.
 
 ## 6. Binding sugerido
 
@@ -338,6 +409,12 @@ COMMIT_MODE:
 COMMIT_PLAN_STATUS:
 COMMIT_STATUS:
 PR_STATUS:
+REMOTE_MR_STATUS:
+REMOTE_MR_IID:
+REMOTE_MR_URL:
+REMOTE_MR_MERGED_BY:
+REMOTE_MR_MERGED_AT:
+REMOTE_MR_MERGE_COMMIT:
 PENDING:
 ```
 
@@ -367,6 +444,7 @@ referenciar orquestrador.md
 -> FILTRAR HUMAN_ONLY PATHS
 -> LOAD CURRENT SKILL ONLY
 -> LOAD ALLOWED CONTEXT ONLY
+-> GITLAB_ACCESS se houver âncora GitLab
 -> EXECUTE
 -> CHECK GATE
 -> SAVE CURRENT_STATE + NEXT_ACTION
