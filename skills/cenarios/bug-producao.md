@@ -15,30 +15,29 @@ writes:
 # Cenário — Bug de produção
 
 ## Regra de rigor
-Produção exige evidência antes de edição e julgamento reforçado.
+Produção exige evidência antes de edição e profundidade `CRITICAL` salvo justificativa explícita em contrário.
 
-## Pipeline
-1. Confirmar modelos e usar JUDGE_SECONDARY quando disponível.
-2. Intake: sintomas, horário, ambiente, impacto, logs, requests, correlação, versões.
-3. Memory-first por endpoint/erro/feature relacionada.
-4. HEAD_STRONG define hipóteses e evidências necessárias; não implementa.
-5. ECONOMICAL faz investigação dirigida.
-6. HEAD_STRONG consolida causa raiz provável/confirmada e solução mínima.
-7. Aprovar solução + plano.
-8. Criar regression RED e selar.
-9. GO -> EXECUTOR implementa correção mínima.
-10. GREEN + regressão proporcional ao risco.
-11. Judge primário fresh-context read-only.
-12. Judge secundário para impacto alto/cross-repo/contrato crítico.
-13. QA/reprodução orientada.
-14. Archive: causa raiz, sintomas, detecção, correção, prevenção, limitações.
+## Regra principal
+Este cenário **não define pipeline próprio**. Estados, gates, papéis e transições vêm exclusivamente do
+`orquestrador.md` e da skill atual.
+
+## Delta deste cenário
+- Intake deve registrar sintomas, ambiente, impacto, logs/requests disponíveis, versões e correlação quando existirem.
+- Discovery deve trabalhar por hipóteses e evidências; stacktrace não vira causa raiz automaticamente.
+- `EXECUTION_LEVEL=CRITICAL` amplia verificação de contratos, persistência/transação, integração e regressão.
+- Solução deve preferir correção mínima e rollback/mitigação quando relevante.
+- RED exige teste de regressão quando tecnicamente viável.
+- GREEN deve executar regressão proporcional ao impacto.
+- `JUDGE_SECONDARY` é recomendado para impacto alto, cross-repo, contrato crítico ou divergência material.
+- Archive deve registrar causa raiz, sintomas, detecção, correção, prevenção e limitações úteis.
 
 ## Proibições
-- não tratar stacktrace como causa raiz automaticamente;
 - não fazer alteração destrutiva em produção;
 - não flexibilizar teste para aprovar fix;
-- não permitir que juiz corrija código.
-
+- não permitir que Judge corrija código;
+- não pular gates canônicos por urgência.
 
 ## Regra de testes unitários
-Os testes RED devem incluir happy path e **edge cases aplicáveis** à história/bug. Edge cases relevantes não cobertos precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras, contratos ou riscos.
+Os testes RED devem incluir happy path e **edge cases aplicáveis**. Edge cases relevantes não cobertos
+precisam de justificativa explícita; não criar cenários artificiais sem vínculo com critérios, regras,
+contratos ou riscos.

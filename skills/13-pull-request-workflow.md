@@ -302,9 +302,11 @@ Após gerar:
 
 ```yaml
 PR_STATUS: DESCRIPTION_READY
-NEXT_ACTION: MANUAL_PR_INPUT
+CURRENT_STATE: READY_TO_ARCHIVE
+NEXT_ACTION: REQUEST_ARCHIVE
+NEXT_MODEL_ROLE: ECONOMICAL
 ```
 
-O usuário é responsável por abrir/preencher o PR/MR no provider.
+O usuário é responsável por abrir/preencher o PR/MR no provider. O fluxo não espera estado remoto do PR para seguir ao archive.
 
 A skill nunca muda o status para `OPENED`, pois não acessa o provider remoto.

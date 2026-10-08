@@ -1,0 +1,6 @@
+{
+  "gitlab": {
+    "baseUrl": "${GITLAB_BASE_URL}",
+    "token": "${GITLAB_API_TOKEN}"
+  }
+}

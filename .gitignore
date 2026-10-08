@@ -1,0 +1,8 @@
+### pastas ###
+/infrastructure/jira/*
+!/infrastructure/jira/jira-auth.local.json
+/infrastructure/gitlab/*
+!/infrastructure/gitlab/gitlab-auth.local.json
+.env
+
+

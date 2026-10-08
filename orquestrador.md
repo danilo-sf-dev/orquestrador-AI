@@ -1,142 +1,136 @@
 # ORQUESTRADOR — Engenharia de Software Java/Spring Boot
 
-**Versão:** 1.8.0
-**Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**. Cada skill define **como executar** a sua fase.
-
----
+**Versão:** 1.9.4  
+**Objetivo:** ser a porta única de entrada. O orquestrador decide **estado, fluxo, skill, papel, gate e próxima ação**; cada skill define como executar sua fase.
 
 ## 1. Princípio central
 
 ```text
-ORQUESTRADOR
-= estado + roteamento + gates + próxima ação
-
-SKILL
-= execução detalhada da etapa
+ORQUESTRADOR = estado + roteamento + gates + próxima ação
+SKILL        = execução detalhada da etapa
 ```
 
-Não duplicar no orquestrador regras detalhadas de Jira, Discovery, RED, implementação, GREEN, Judge, QA, Commit ou PR.
-
----
+Não duplicar aqui regras detalhadas das skills.
 
 ## 2. Invariantes globais
 
-1. Skills trabalham com papéis: `HEAD_STRONG`, `EXECUTOR`, `ECONOMICAL`, `MULTIMODAL`, `JUDGE_PRIMARY`, `JUDGE_SECONDARY`.
-2. Binding papel → modelo é resolvido pela sessão/runtime; não persistir `model-profile.md`.
-3. `STATE.md` é checkpoint operacional curto, não documentação completa.
-4. Lazy loading: carregar apenas core + `STATE.md` + skill atual + `reads` permitidos + código necessário.
-5. Transcript completo não entra automaticamente em implementação, GREEN ou Judge.
-6. RED aprovado fica protegido por `red-tests.lock`.
-7. Judge deve ser fresh-context/read-only e não pode editar implementação.
-8. Mudança em escopo já julgado invalida o julgamento e exige GREEN + novo Judge.
-9. Commit exige escolha explícita de modo: `AUTOMÁTICO`, `MANUAL` ou `OUTROS`. `AUTOMÁTICO` autoriza a execução faseada conforme a skill 12; `MANUAL` exige `POSSO COMITAR` após o plano; `OUTROS` nunca implica autorização de commit.
-10. PR só ocorre por solicitação explícita.
-11. Operações Git destrutivas, merge, rebase ou force push não são automáticos.
-12. Credenciais Jira nunca entram em memória, logs, commit ou PR.
-13. `ABRIR PR` significa gerar título/descrição para input manual; acesso/criação remota de PR/MR é proibido pela skill 13.
-13. `.ai/` é memória estritamente local e **nunca pode ser versionada**. Ao criar ou reutilizar `.ai/`, verificar imediatamente se o `.gitignore` do repositório contém uma regra efetiva que ignore `.ai/`; se não contiver, adicionar `.ai/` antes de continuar.
-14. Antes de qualquer commit, verificar novamente com Git que `.ai/` está ignorada e que nenhum arquivo sob `.ai/` está staged/tracked. Se a proteção falhar, o commit fica bloqueado até corrigir.
-15. Os nomes de estado exibidos ao usuário são **canônicos** e devem ser exatamente os definidos na tabela `Skills e papéis`. Não renomear, resumir, traduzir ou agrupar estados em checklists/status.
-16. Em `ROUTING_MODE=manual`, **toda mudança de papel de modelo é um gate obrigatório**. A próxima skill não pode ser executada com o papel/modelo anterior.
-17. Antes de cada fase, exibir um `PHASE BANNER` com `STATE`, `SKILL`, `ROLE`, `MODEL_SUGGESTED` e `USER_ACTION`. O banner é a fonte visual de verdade para o usuário.
-18. Se o papel requerido pela próxima fase for diferente do papel atual e o runtime não trocar modelo automaticamente, parar em `MODEL_HANDOFF_REQUIRED` e aguardar confirmação do usuário após a troca manual.
-19. `Judge FAIL` nunca retorna genericamente para RED. O Judge deve classificar o `FAIL` como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
-20. `IMPLEMENTATION_DEFECT` retorna somente para `REWORK_IMPLEMENTATION`; as outras classes passam por `JUDGE_RECOVERY [HEAD_STRONG]` antes de qualquer mudança em solução/PRD/RED.
-21. `REOPEN RED` é uma exceção explícita: somente após recovery justificar impacto e o usuário responder exatamente `REOPEN RED`.
-22. `RED_REVIEW` e `RED_EXECUTION` são estados diferentes: revisão/aprovação não pode ser apresentada como se os testes já tivessem sido criados/executados/locked.
-23. Conclusões que mudam solução, plano ou julgamento devem apontar evidência e distinguir `FACT`, `INFERENCE` e `UNKNOWN`.
-24. Cada arquivo principal de skill deve permanecer abaixo de 400 linhas físicas. Detalhe condicional vai para referência focada e só é carregado quando o modo correspondente exigir.
-25. Planejamento e julgamento usam a cadeia `Jira/AC -> DD -> PLAN -> arquivo/diff -> teste/evidência`; itens sem origem ou validação explícita não entram silenciosamente no escopo.
-26. Revisão de qualidade arquitetural é opcional e só ocorre por solicitação explícita ou evidência de
-    problema estrutural consistente; patterns e mudanças arquiteturais não são objetivos por si só.
+1. Papéis: `HEAD_STRONG`, `EXECUTOR`, `ECONOMICAL`, `MULTIMODAL`, `JUDGE_PRIMARY`, `JUDGE_SECONDARY`.
+2. Binding papel → modelo pertence à sessão/runtime; não persistir `model-profile.md`.
+3. `STATE.md` é checkpoint curto; detalhes ficam nos artefatos da feature.
+4. Toda fase concluída deve persistir `CURRENT_STATE` + `NEXT_ACTION` suficientes para `RESUME` determinístico.
+5. Lazy loading: carregar somente core + STATE + skill atual + reads/referências explicitamente necessárias.
+6. `documentacao-usuario/**` é **HUMAN_ONLY** e possui exclusão global absoluta: nenhuma skill/agente pode ler, buscar, indexar, resumir, citar, incluir em handoff ou usar seu conteúdo como evidência, memória ou fonte de decisão. Se uma busca global retornar resultado desse path, ignorar sem abrir o arquivo.
+7. Transcript, logs brutos e features antigas completas não entram automaticamente no contexto.
+8. Fluxo comum é contract-driven: `Jira -> Discovery -> Requirements -> Design -> Solution -> SPEC -> RED -> Code -> GREEN -> Judge`.
+9. `03-spec.md` é o artefato canônico da SPEC aprovada para novas features.
+10. Requirement Analysis separa `EXPLICIT_REQUIREMENT`, `IMPLICIT_NECESSITY`, `ASSUMPTION`, `OPEN_QUESTION`, `TECHNICAL_RISK`, `OPTIONAL_IMPROVEMENT`.
+11. `OPEN_QUESTION` bloqueia somente quando a resposta muda materialmente comportamento, contrato, negócio, segurança, persistência, integração, efeito destrutivo ou desenho do RED.
+12. Solution Design segue arquitetura válida existente por padrão, prefere a menor mudança suficiente e só propõe mudança estrutural com ganho material demonstrável.
+13. Revisão arquitetural (`18`) continua opcional e especializada; não é checklist obrigatório.
+14. `OPTIONAL_IMPROVEMENT` nunca vira escopo, RED ou obrigação do Judge sem aprovação explícita.
+15. Planejamento e julgamento usam rastreabilidade do contrato até código/teste/evidência.
+16. RED aprovado fica protegido por `red-tests.lock`; implementação/GREEN não podem alterá-lo.
+17. GREEN usa evidência mecânica; código presente ou teste verde sem rastreabilidade não prova contrato.
+18. Judge é read-only/evidence-isolated e usa `evidence-or-zero`: sem evidência suficiente não há `PASS`. Mesmo no mesmo chat, histórico anterior não vale como evidência de julgamento.
+19. Mudança no escopo julgado invalida o julgamento e exige novo GREEN + Judge.
+20. Judge FAIL é classificado como `IMPLEMENTATION_DEFECT`, `RED_CONTRACT_DEFECT`, `DISCOVERY_GAP` ou `REQUIREMENT_AMBIGUITY`.
+21. `IMPLEMENTATION_DEFECT` volta apenas para rework; demais classes passam por `JUDGE_RECOVERY`.
+22. `JUDGE_RECOVERY` é recovery dirigido por finding e também pode ser acionado **antes do Judge** por RED/implementação/GREEN/QUICK quando surgir fato capaz de invalidar contrato ou RED.
+23. Recovery sempre retorna ao menor estado seguro; contrato afetado fica stale e usa novamente seu gate normal.
+24. `REOPEN RED` exige recovery + autorização humana exata `REOPEN RED`; nenhuma outra fase altera lock/teste selado diretamente.
+25. `RED_REVIEW` e `RED_EXECUTION` são estados distintos.
+26. Conclusões materiais distinguem `FACT`, `INFERENCE`, `UNKNOWN` e apontam evidência quando possível.
+27. Cada arquivo principal de skill deve ficar abaixo de 400 linhas físicas; detalhe condicional vai para referência lazy.
+28. `.ai/` é estritamente local: `NEVER_STAGE`, `NEVER_COMMIT`, `NEVER_PUSH`.
+29. Ao criar/reusar `.ai/`, confirmar regra efetiva no `.gitignore`; repetir verificação antes de qualquer commit.
+30. Commit oferece `AUTOMÁTICO | MANUAL | OUTROS`; automático mantém commits faseados e mensagens EN.
+31. PR só ocorre por solicitação explícita; `ABRIR PR` gera título/descrição para input manual e não cria PR/MR remoto.
+32. Merge, rebase, force push e operações Git destrutivas não são automáticos.
+33. Credenciais Jira reais nunca entram em memória, logs, commit ou PR. O arquivo versionado do projeto contém somente placeholders/fake credentials.
+34. Em `ROUTING_MODE=manual`, toda mudança de papel é gate; sem confirmação técnica de troca automática, tratar como manual.
+35. Troca de papel/modelo usa `MODEL_SWITCH` no mesmo chat por padrão. Ela nunca implica automaticamente nova conversa.
+36. Quando a sessão ficar longa/poluída mas ainda útil, preferir `COMPACT_CONTEXT`; no VS Code usar `/compact` quando disponível. `/clear` inicia nova sessão e equivale conceitualmente a `FRESH_CONTEXT`.
+37. `FRESH_CONTEXT` é excepcional e explícito: usar apenas quando isolamento real for necessário ou solicitado.
+38. Antes de cada fase mostrar `PHASE BANNER` com estado canônico, skill, papel/modelo e ação do usuário.
+39. `MODEL_ROLES_CONFIRMED_THIS_SESSION` deve ser resetado no início de cada nova sessão antes do bootstrap confirmar bindings atuais.
+40. **Legado PRD:** features antigas podem conter `03-prd.md`, `PRD_PLAN_REVIEW` e `PRD_PLAN_APPROVED`. Interpretar como predecessores históricos da SPEC/plan atuais; não usar PRD em novas features.
+41. `19-gitlab-access.md` é a entrada canônica para contexto GitLab e segue o mesmo modelo do Jira: helper determinístico, cache-first, leitura normalizada e fallback local controlado. É **capacidade on-demand** (não fase obrigatória); nenhum cenário exige carregá-la.
+42. Credenciais GitLab reais nunca entram em memória, logs, commit ou PR. `gitlab-auth.local.json` contém somente referências `${GITLAB_*}`; os valores ficam no `.env` local ignorado.
+43. Acesso GitLab autenticado é somente leitura. Criar MR, comentar, criar branch, aprovar ou alterar qualquer recurso exige solicitação explícita do usuário com ação, recurso e conteúdo/campos; posse de token com escopo `api` não é autorização.
+44. Jira e GitLab são acessados diretamente por HTTP/REST pelos helpers oficiais. MCP não faz parte do transporte, da autenticação ou do fluxo de cache de nenhuma das integrações.
+45. `21-verificacao-pre-deploy.md` é **capacidade on-demand**, não step do fluxo: não é estado, não entra na tabela de fases, não é acionada automaticamente e não altera código/manifesto/pipeline/configuração. Só roda por pedido explícito do usuário. É agnóstica: descobre gates, ferramentas e política de bloqueio em runtime, reproduz localmente o que for reproduzível (Docker opcional, nunca com credenciais montadas) e distingue achado de bloqueio. O que não puder ser verificado é `NAO_VERIFICADO`, nunca sucesso.
 
----
+## 3. NEW e RESUME
 
-## 3. Entrada única: referência a `orquestrador.md`
+Antes de NEW, procurar feature ativa inequívoca. Se existir, ler `STATE.md`, resetar a confirmação de modelos da sessão e executar somente `NEXT_ACTION`; não repetir fase aprovada sem fato novo/recovery.
 
-No VS Code/Cursor, iniciar informando o caminho deste arquivo e pedindo para lê-lo e segui-lo. Não
-depender de comando registrado na interface.
-
-### 3.1 RESUME antes de NEW
-
-Ao iniciar:
+Para NEW, escolher:
 
 ```text
-1. Resolver feature ativa/candidata.
-2. Se existir feature inequívoca -> ler STATE.md e executar NEXT_ACTION.
-3. Se não existir -> iniciar NEW.
+QUICK / AUTO-GO
+- tarefa simples, localizada, baixo risco e comportamento claro
+- uma aprovação inicial; depois RED -> implementação -> GREEN até Judge
+
+COMUM / COMPLETA
+- história/bug/integração que precisa discovery, requisitos, design, SPEC/plano e gates completos
 ```
 
-No `RESUME`, não repetir Jira, Discovery, solução, PRD ou RED já concluídos sem motivo explícito.
-
-### 3.2 NEW: selecionar fluxo antes do Jira
-
-Perguntar:
-
-```text
-Qual tipo de execução deseja iniciar?
-
-1. QUICK / AUTO-GO
-   Tarefa simples, localizada, de baixo risco e comportamento claro.
-   Após sua aprovação inicial, RED -> implementação -> GREEN seguem sem
-   novas aprovações até o handoff para Judge.
-
-2. COMUM / COMPLETA
-   História, bug, integração ou alteração que precisa de discovery,
-   solução, plano e gates completos.
-
-Responda: QUICK ou COMUM.
-```
-
-Persistir depois que o Jira for conhecido:
-
-```yaml
-FLOW_MODE: QUICK_AUTOGO | STANDARD_GATED
-```
-
-### 3.3 Jira é porta comum
+Depois:
 
 ```text
 receber URL/ID Jira
 -> skills/15-jira-access.md
--> JIRA_CONTEXT_READY
+-> JIRA_CONTEXT_READY=true
 -> criar/persistir feature
--> rotear para o fluxo selecionado
+-> rotear para fluxo escolhido
 ```
 
-Nenhuma feature nova avança sem `JIRA_CONTEXT_READY=true`.
+`15-jira-access.md` é a entrada única: usa a configuração por ambiente como padrão e, somente quando
+ela não estiver disponível, aplica `skills/jira/jira-access-settings-local.md` como fallback de leitura.
+Os dois caminhos devolvem o mesmo contexto e não criam uma segunda fase de intake. Acesso autenticado
+nunca autoriza escrita por si só: qualquer criação, atualização, comentário ou transição no Jira requer
+autorização explícita do usuário para a ação, issue e conteúdo/campos específicos. Quando o usuário
+autoriza, o caminho de mutação está documentado na seção “Regra de escrita / Procedimento canônico de
+mutação” de `15-jira-access.md` (credencial via helper oficial, `PUT` de campos ou `POST` de comentário,
+confirmação por status HTTP e revalidação via `refresh`).
 
-### 3.4 Proteção obrigatória da memória local `.ai/`
+### 3.1 Acesso GitLab (capacidade on-demand)
 
-Quando a feature precisar criar ou reutilizar `.ai/`:
+O GitLab **não** é porta de entrada de fluxo e **não** substitui o Jira. É capacidade de contexto
+consultável em qualquer fase, pelo mesmo padrão do Jira:
 
 ```text
-1. localizar o root Git canônico da feature;
-2. verificar se `.ai/` existe;
-3. verificar se `.ai/` está efetivamente ignorada pelo Git;
-4. se não estiver, adicionar a regra `.ai/` ao `.gitignore` do repositório;
-5. confirmar novamente que Git ignora `.ai/`;
-6. somente então criar/usar `.ai/features/<JIRA-ID>/`.
+receber URL ou chave canônica GitLab
+-> skills/19-gitlab-access.md
+-> GITLAB_CONTEXT_READY=true
+-> contexto normalizado efêmero
 ```
 
-Regra absoluta:
+Comando canônico:
 
-```text
-.ai/ = LOCAL_ONLY
-.ai/ NEVER_COMMIT
-.ai/ NEVER_STAGE
-.ai/ NEVER_PUSH
+```bash
+python infrastructure/gitlab/gitlab-cache.py read grupo/projeto::merge_requests/42
 ```
 
-Não existe modo `include` ou `ask` para a memória `.ai/`. Ela nunca deve subir para o repositório remoto.
+Usar quando: o card referencia MR/projeto; `DISCOVERY` precisa de código, árvore, arquivos ou
+histórico; `SOLUTION_DESIGN` valida arquitetura existente; `COMMIT_REVIEW`/`PR_DESCRIPTION` conferem
+estado remoto. Fallback de leitura somente quando a auth principal não resolver:
+`skills/gitlab/gitlab-access-settings-local.md`.
 
-Se `.ai/` já existir ao iniciar/resumir uma feature, a mesma verificação é obrigatória antes de continuar.
+Regras: cache-first; sem `curl`/`jq` ad-hoc; `GET` apenas; mutação exige autorização explícita
+(ação + recurso + conteúdo).
 
----
+Para conferir um MR já publicado, usar `skills/20-gitlab-mr-monitor.md`: consulta somente o status
+e as notas disponíveis (`GET`), sem chamar `discussions`, sem analisar código e sem alterar o remoto.
+Aceita `atualize o status do merge <JIRA-ID>` ou um caminho `.../.ai/features/<JIRA-ID>/delivery`;
+quando existir, usa `pull-request-tracking.md` para obter projeto/IID. Nesse contexto, atualizar
+significa atualizar a consulta/relatorio local, nunca mudar o MR remoto.
+O Jira continua sendo a fonte do status da história; o GitLab informa apenas o status remoto do
+MR/PR e seus eventos disponíveis. `MERGED` no GitLab não encerra automaticamente uma feature Jira.
 
-## 3.5 Contrato visual de fase e troca de modelo
+## 4. PHASE BANNER / troca de modelo e contexto
 
-Antes de cada fase, mostrar a fonte visual de verdade:
+Antes de cada fase:
 
 ```text
 PHASE
@@ -149,15 +143,34 @@ NEXT_ACTION: <ação canônica>
 USER_ACTION: <ação necessária ou AUTO_CONTINUE>
 ```
 
-Usar somente estados canônicos da tabela `Skills e papéis` mais estados de controle (`MODEL_HANDOFF_REQUIRED`, `JUDGE_HANDOFF`, `WAITING_GO`). Nunca substituir por agrupamentos como `RED + lock`, `Implementação + GREEN` ou `Judge + QA + Commit`.
+Se `ROUTING_MODE=manual` e o próximo papel diferir do atual, salvar estado, marcar
+`MODEL_HANDOFF_REQUIRED=true` e parar até confirmação específica da troca.
 
-Se `ROUTING_MODE=manual` e `NEXT_MODEL_ROLE != CURRENT_MODEL_ROLE`, salvar o estado, marcar `MODEL_HANDOFF_REQUIRED=true`, mostrar o banner e **parar**. Só executar a próxima skill após confirmação específica da troca (`CONTINUAR RED`, `CONTINUAR JUDGE`, etc.). Em routing automático sem confirmação técnica da troca, tratar como manual.
+Por padrão, a confirmação significa apenas selecionar o novo modelo **no mesmo chat** (`MODEL_SWITCH`).
 
-Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` e `NEXT_ACTION`; listar o fluxo completo somente se solicitado.
+Política de contexto:
 
----
+```text
+SAME_CHAT / MODEL_SWITCH
+- default para todo o fluxo
+- mantém a mesma conversa ao trocar modelo/papel
 
-## 4. Skills e papéis
+COMPACT_CONTEXT
+- mantém a mesma sessão
+- resume/poda histórico antigo quando o runtime suportar
+- no VS Code: /compact
+- preferir quando contexto ficou grande/poluído, mas decisões anteriores ainda importam
+
+FRESH_CONTEXT
+- nova sessão/contexto
+- excepcional e explícito
+- usar para isolamento forte, auditoria realmente independente, loops muito grandes ou escolha do usuário
+- no VS Code, /clear inicia nova sessão e portanto entra nesta categoria
+```
+
+`MODEL_HANDOFF_REQUIRED=true` nunca significa, sozinho, abrir novo chat.
+
+## 5. Skills e papéis
 
 | Estado | Skill | Papel |
 |---|---|---|
@@ -166,12 +179,15 @@ Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` 
 | `INTAKE` | `01-intake-jira.md` | `ECONOMICAL` |
 | `MEMORY_LOOKUP` | `02-memoria-feature.md` | `ECONOMICAL` |
 | `DISCOVERY` | `03-investigacao.md` | `ECONOMICAL` |
+| `REQUIREMENT_ANALYSIS` | `04a-analise-requisitos.md` | `HEAD_STRONG` |
 | `INTERVIEW_OPTIONAL` | `04-entrevista-opcional.md` | `HEAD_STRONG` |
 | `TECHNICAL_QUALITY_REVIEW` | `18-qualidade-arquitetural.md` | `HEAD_STRONG` |
+| `SOLUTION_DESIGN` | `04b-design-solucao.md` | `HEAD_STRONG` |
 | `SOLUTION_REVIEW` | `05-solucao-proposta.md` | `HEAD_STRONG` |
-| `PRD_PLAN_REVIEW` | `06-prd-plano.md` | `HEAD_STRONG` |
+| `SPEC_PLAN_REVIEW` | `06-spec-plano.md` | `HEAD_STRONG` |
 | `RED_REVIEW` | `07-testes-red.md` | `EXECUTOR` |
 | `RED_EXECUTION` | `07-testes-red.md` | `EXECUTOR` |
+| `WAITING_GO` | `08-implementacao-go.md` | `EXECUTOR` |
 | `IMPLEMENTING` | `08-implementacao-go.md` | `EXECUTOR` |
 | `REWORK_IMPLEMENTATION` | `08-implementacao-go.md` | `EXECUTOR` |
 | `GREEN_VALIDATION` | `09-validacao-green.md` | `EXECUTOR` |
@@ -183,9 +199,36 @@ Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` 
 | `READY_TO_ARCHIVE` | `14-arquivamento.md` | `ECONOMICAL` |
 | `QUICK_AUTOGO` | `16-quick-autogo.md` | `EXECUTOR` |
 
----
+Nota: `19-gitlab-access.md` é **capacidade on-demand** (papel `ECONOMICAL`) e não corresponde a um
+estado canônico da tabela. Qualquer estado pode consultá-la via
+`infrastructure/gitlab/gitlab-cache.py` quando precisar de contexto GitLab, mantendo o fluxo
+`STANDARD_GATED` inalterado.
 
-## 5. Binding de modelos — sugestão atual
+`20-gitlab-mr-monitor.md` também é capacidade on-demand para consultas explícitas de status/notas;
+não é etapa obrigatória nem autoriza qualquer operação remota de escrita.
+
+### 5.1 Verificação pré-deploy (capacidade on-demand)
+
+`21-verificacao-pre-deploy.md` é capacidade on-demand, **agnóstica de projeto e ferramenta**, e não
+corresponde a estado canônico da tabela. Executa um script que reproduz **antes do deploy** os gates
+que a esteira rodaria, evitando descobrir o bloqueio depois do push.
+
+```text
+receber pedido explícito ("rodar a verificacao", "checar vulnerabilidades",
+"a esteira bloqueou", "validar antes do deploy")
+-> skills/21-verificacao-pre-deploy.md
+-> python infrastructure/pre-deploy/pre-deploy-check.py --repo <REPO>
+-> PRE_DEPLOY_STATUS: OK | BLOQUEIA | PARCIAL
+```
+
+Regras: não é acionada automaticamente por nenhum estado; não altera código, manifesto, pipeline ou
+configuração (apenas relata achado + correção sugerida); descobre build, pipeline, ferramentas e
+política de bloqueio em runtime; usa Docker quando disponível para as engines reproduzíveis e marca
+`NAO_VERIFICADO` (nunca sucesso) quando não for possível. Se o achado exigir código do projeto, o
+retorno roteia para `REWORK_IMPLEMENTATION` normalmente; se exigir reabertura de contrato, para
+`JUDGE_RECOVERY`.
+
+## 6. Binding sugerido
 
 | Papel | Modelo sugerido |
 |---|---|
@@ -193,205 +236,143 @@ Ao usuário perguntar onde está, mostrar primeiro apenas `STATE`, `ROLE/MODEL` 
 | `EXECUTOR` | GPT-5.6 Luna Pro |
 | `ECONOMICAL` | DeepSeek V4 Flash 0731 |
 | `MULTIMODAL` | Gemini 3.7 Flash |
-| `JUDGE_PRIMARY` | DeepSeek V4 Pro 0813 fresh/read-only |
+| `JUDGE_PRIMARY` | DeepSeek V4 Pro 0813 read-only/evidence-isolated |
 | `JUDGE_SECONDARY` | Gemini 3.7 Flash ou outro independente |
 
-Se o runtime não trocar modelos automaticamente, a troca é manual no handoff.
+Economizar pelo custo total esperado: `ECONOMICAL` coleta/compacta; `HEAD_STRONG` decide/desambigua;
+`EXECUTOR` aplica contrato aprovado; `JUDGE_*` preserva independência de responsabilidade e evidência.
 
-### Roteamento por responsabilidade
-
-Roteamento otimiza o custo total esperado, incluindo releitura, tentativas, rework e nova validação —
-não apenas o preço de uma chamada.
-
-- `ECONOMICAL` coleta e compacta evidências; não encerra decisão arquitetural ambígua.
-- `HEAD_STRONG` resolve arquitetura, hipóteses concorrentes, segurança, concorrência/transação,
-  contrato de alto impacto e premissa técnica contestada.
-- `EXECUTOR` aplica plano aprovado; ambiguidade material ou falha repetida não autoriza improviso.
-- `JUDGE_*` preserva independência; força de modelo não substitui fresh context/read-only.
-
-Quando uma fase encontrar responsabilidade de outro papel, registrar a incerteza e a evidência,
-salvar o estado e rotear para a fase forte já responsável por aquela decisão (`TECHNICAL_QUALITY_REVIEW`,
-`SOLUTION_REVIEW`, `PRD_PLAN_REVIEW` ou `JUDGE_RECOVERY`). Depois da decisão, voltar ao papel econômico/executor; não
-manter `HEAD_STRONG` por precaução.
-
----
-
-## 6. Fluxo `STANDARD_GATED`
+## 7. Fluxo `STANDARD_GATED`
 
 ```text
-JIRA_ACCESS            [ECONOMICAL]
--> INTAKE              [ECONOMICAL]
--> MEMORY_LOOKUP       [ECONOMICAL]
--> DISCOVERY           [ECONOMICAL]
--> MODEL_HANDOFF_REQUIRED se próxima fase exigir HEAD_STRONG
--> INTERVIEW_OPTIONAL  [HEAD_STRONG] se necessário
--> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se requerido por evidência ou solicitação explícita
--> SOLUTION_REVIEW     [HEAD_STRONG] [APROVAR SOLUÇÃO]
--> PRD_PLAN_REVIEW     [HEAD_STRONG] [APROVAR PRD/PLANO]
--> MODEL_HANDOFF_REQUIRED para EXECUTOR
--> RED_REVIEW          [EXECUTOR] [APROVAR RED]
--> RED_EXECUTION       [EXECUTOR] cria/executa RED + lock
--> WAITING_GO          [EXECUTOR] [GO]
--> IMPLEMENTING        [EXECUTOR]
--> GREEN_VALIDATION    [EXECUTOR]
--> JUDGE_HANDOFF
--> MODEL_HANDOFF_REQUIRED para JUDGE_PRIMARY
--> JUDGING             [JUDGE_PRIMARY]
-   -> PASS/PASS_WITH_RISKS: seguir para QA
-   -> FAIL + IMPLEMENTATION_DEFECT: handoff para EXECUTOR -> REWORK_IMPLEMENTATION -> GREEN_VALIDATION -> novo JUDGING fresh
-   -> FAIL + DISCOVERY_GAP|RED_CONTRACT_DEFECT|REQUIREMENT_AMBIGUITY: handoff para HEAD_STRONG -> JUDGE_RECOVERY
--> MODEL_HANDOFF_REQUIRED para EXECUTOR quando QA for a próxima fase
--> QA_REVIEW           [EXECUTOR] [APROVAR QA]
--> COMMIT_REVIEW       [EXECUTOR] [ESCOLHER: AUTOMÁTICO | MANUAL | OUTROS]
--> PR_DESCRIPTION      [EXECUTOR] somente se solicitado; gera conteúdo para input manual, sem acesso remoto
--> MODEL_HANDOFF_REQUIRED para ECONOMICAL quando archive for executado
--> READY_TO_ARCHIVE    [ECONOMICAL]
+JIRA_ACCESS [ECONOMICAL]
+-> INTAKE [ECONOMICAL]
+-> MEMORY_LOOKUP [ECONOMICAL]
+-> DISCOVERY [ECONOMICAL]
+-> REQUIREMENT_ANALYSIS [HEAD_STRONG]
+   -> Q bloqueante: INTERVIEW_OPTIONAL -> REQUIREMENT_ANALYSIS (delta)
+-> TECHNICAL_QUALITY_REVIEW [HEAD_STRONG] somente se requerido
+-> SOLUTION_DESIGN [HEAD_STRONG]
+-> SOLUTION_REVIEW [HEAD_STRONG] [APROVAR SOLUÇÃO]
+-> SPEC_PLAN_REVIEW [HEAD_STRONG] [APROVAR SPEC/PLANO]
+-> RED_REVIEW [EXECUTOR] [APROVAR RED]
+-> RED_EXECUTION [EXECUTOR] cria/executa RED + lock
+-> WAITING_GO [EXECUTOR] [GO]
+-> IMPLEMENTING [EXECUTOR]
+-> GREEN_VALIDATION [EXECUTOR]
+-> JUDGING [JUDGE_PRIMARY]
+   -> PASS/PASS_WITH_RISKS: QA_REVIEW
+   -> IMPLEMENTATION_DEFECT: REWORK_IMPLEMENTATION -> GREEN -> Judge
+   -> demais FAIL classes: JUDGE_RECOVERY [HEAD_STRONG]
+-> QA_REVIEW [EXECUTOR] [APROVAR QA]
+-> COMMIT_REVIEW [EXECUTOR] [AUTOMÁTICO | MANUAL | OUTROS]
+-> PR_DESCRIPTION somente se solicitado
+-> READY_TO_ARCHIVE [ECONOMICAL] [ARQUIVAR]
 ```
 
-Regras detalhadas pertencem às skills correspondentes.
+`REQUIREMENT_ANALYSIS`, `SOLUTION_DESIGN` e `TECHNICAL_QUALITY_REVIEW` não adicionam gates humanos.
+`FAST | STANDARD | CRITICAL` alteram profundidade, nunca quantidade de gates.
 
-`FAST | STANDARD | CRITICAL` controlam apenas profundidade/rigor neste fluxo; não removem gates.
+## 8. Fluxo `QUICK_AUTOGO`
 
-`TECHNICAL_QUALITY_REVIEW` não cria gate adicional. Sua saída é insumo opcional da solução e pode
-concluir `NO_CHANGE`. O fluxo `QUICK_AUTOGO` não executa essa revisão; pedido de melhoria estrutural
-ou evidência que a exija deve migrar para `STANDARD_GATED`.
+A lógica está em `skills/16-quick-autogo.md`. QUICK não cria artefatos completos de Requirements/Design/SPEC.
+Antes do Quick Contract executa versões compactas de Codebase Recon, Requirement Gap,
+Assumptions/Open Questions e Senior Solution Check.
 
----
-
-## 6.1 Recovery após Judge FAIL
-
-Roteamento determinístico; detalhes em `skills/17-judge-recovery.md`:
-
-| `JUDGE_FAIL_CLASS` | Próximo estado | Papel | Regra |
-|---|---|---|---|
-| `IMPLEMENTATION_DEFECT` | `REWORK_IMPLEMENTATION` | `EXECUTOR` | RED/lock intocáveis; depois GREEN + Judge fresh |
-| `DISCOVERY_GAP` | `JUDGE_RECOVERY` | `HEAD_STRONG` | micro-investigação somente do finding |
-| `RED_CONTRACT_DEFECT` | `JUDGE_RECOVERY` | `HEAD_STRONG` | não editar RED até recovery + autorização |
-| `REQUIREMENT_AMBIGUITY` | `JUDGE_RECOVERY` | `HEAD_STRONG` | perguntar somente a decisão mínima necessária |
-
-`JUDGE_RECOVERY` nunca reinicia Discovery completo. `REOPEN RED` só existe quando a skill 17 justificar impacto e o usuário responder exatamente `REOPEN RED`; depois ocorre handoff para `EXECUTOR`, `RED_REVIEW` aplica somente o delta aprovado e então executa nova `RED_EXECUTION`.
-
----
-
-## 7. Fluxo `QUICK_AUTOGO`
-
-A lógica detalhada fica exclusivamente em:
+Antes de `AUTO-GO`, perda de elegibilidade migra formalmente para:
 
 ```text
-skills/16-quick-autogo.md
+FLOW_MODE=STANDARD_GATED
+CURRENT_STATE=MEMORY_LOOKUP
 ```
 
-Entrada:
+Depois que a execução QUICK já começou, descoberta material usa `JUDGE_RECOVERY` dirigido para preservar
+o que ainda for válido. Após `AUTO-GO`: RED -> lock -> implementação -> GREEN -> Judge.
+
+No QUICK, QA pode ser `APPROVED` ou `NOT_REQUIRED_WITH_REASON` antes do commit.
+
+## 9. Recovery dirigido
+
+`JUDGE_RECOVERY` é o único micro-fluxo de recovery contratual. Ele pode receber finding de:
 
 ```text
-JIRA_CONTEXT_READY=true
-FLOW_MODE=QUICK_AUTOGO
+RED_EXECUTION
+IMPLEMENTATION
+GREEN_VALIDATION
+QUICK_AUTOGO
+JUDGE
 ```
 
-Saídas esperadas:
+Ele classifica impacto em requisito, solução, SPEC/plano e RED e retorna ao **menor estado seguro**.
 
-```text
-QUICK_READY_FOR_JUDGE
-QUICK_AUTOGO_ABORTED
-QA_DECISION
-COMMIT_REVIEW
-```
+Regras:
 
-No `QUICK_AUTOGO`, após `JIRA_ACCESS [ECONOMICAL]`, aplicar `MODEL_HANDOFF_REQUIRED` para `EXECUTOR` antes do Quick Contract quando o roteamento for manual. No `QUICK_READY_FOR_JUDGE`, aplicar novamente o gate para `JUDGE_PRIMARY`. `IMPLEMENTATION_DEFECT` pode voltar a rework do QUICK; qualquer `DISCOVERY_GAP`, `RED_CONTRACT_DEFECT` ou `REQUIREMENT_AMBIGUITY` aborta o QUICK e migra para `JUDGE_RECOVERY` no fluxo comum. Após Judge PASS, se houver QA/Commit com `EXECUTOR`, aplicar novo handoff antes de continuar.
+- implementation-only -> `REWORK_IMPLEMENTATION`;
+- requirement delta -> `REQUIREMENT_ANALYSIS`;
+- solution delta -> `SOLUTION_DESIGN`;
+- SPEC/plan delta -> `SPEC_PLAN_REVIEW`;
+- RED sem lock -> `RED_REVIEW` com gate normal;
+- RED lockado -> reaprovar contratos superiores primeiro, quando necessário, e então solicitar `REOPEN RED`.
 
----
+Recovery não edita diretamente código, teste selado ou contrato aprovado.
 
-## 8. Lazy loading e handoff
+## 10. Lazy loading, exclusões e handoff
 
-Por chamada carregar apenas:
+Carregar por chamada:
 
 ```text
 ORCHESTRATOR_CORE
 + STATE.md
 + skill atual
-+ referência condicional explicitamente roteada pela skill atual
++ referência condicional roteada
 + reads permitidos
 + código necessário
 ```
 
-Não carregar automaticamente:
+Exclusão absoluta antes de qualquer leitura/busca:
 
 ```text
-README
-todas as skills
-todos os templates
-transcript completo
-raw discovery logs
-hipóteses descartadas
-outras features inteiras
-todas as referências de uma skill de uma vez
+documentacao-usuario/**  # HUMAN_ONLY
 ```
 
-Para troca de papel/modelo usar `templates/handoff-packet.md` com:
+Handoff usa `templates/handoff-packet.md`; apontar artefatos em vez de copiar transcript. O template também
+carrega `documentacao-usuario/**` em `DO_NOT_READ` como defesa adicional.
 
-```text
-JIRA
-CURRENT_STATE
-NEXT_STATE
-EXECUTION_LEVEL
-ROLE
-OBJECTIVE
-READ
-DO_NOT_READ
-CONSTRAINTS
-APPROVED_DECISIONS
-PENDING
-WRITE
-EXPECTED_OUTPUT
-```
+No `MODEL_SWITCH` normal, handoff não exige nova sessão. Em `COMPACT_CONTEXT`, preservar no resumo pelo menos
+Jira/objetivo, decisões aprovadas, contrato vigente, `CURRENT_STATE`, `NEXT_ACTION`, RED lock e blockers atuais.
+Em `FRESH_CONTEXT`, passar somente o pacote mínimo permitido pela skill destino.
 
----
-
-## 9. Memória por Jira
-
-Pasta:
+## 11. Memória por Jira
 
 ```text
 .ai/features/<JIRA-ID>/
+  STATE.md
+  00-jira.md
+  01-discovery.md
+  01-requirements.md
+  01-quality-review.md     # opcional
+  02-design.md
+  02-solution.md
+  03-spec.md
+  04-implementation-plan.md
+  05-red-tests.md
+  red-tests.lock
+  06-implementation-summary.md
+  07-green-evidence.md
+  08-judgement.md
+  09-qa-tests.md
+  10-qa-guide.md
+  11-archive.md
+  recovery/
+  qa/
+  delivery/
 ```
 
-Estrutura estável:
+No QUICK, criar somente artefatos realmente usados. `11-archive.md` é canônico; `13-archive.md` é legado.
 
-```text
-STATE.md
-00-jira.md
-01-discovery.md
-01-quality-review.md  # somente quando TECHNICAL_QUALITY_REVIEW ocorrer
-02-solution.md
-03-prd.md
-04-implementation-plan.md
-05-red-tests.md
-red-tests.lock
-06-implementation-summary.md
-07-green-evidence.md
-08-judgement.md
-09-qa-tests.md
-10-qa-guide.md
-11-archive.md
-recovery/
-  judge-recovery-<N>.md
-qa/
-delivery/
-  commit.md
-  pull-request.md
-  pr/
-```
+Ao consultar features antigas, `03-prd.md` significa o predecessor histórico da atual `03-spec.md`.
 
-No QUICK, criar apenas os artefatos realmente usados.
-
-Compatibilidade:
-- `11-archive.md` é o canônico;
-- `13-archive.md` é apenas legado;
-- novas gravações usam `11-archive.md` + `delivery/`.
-
----
-
-## 10. STATE mínimo
+## 12. STATE mínimo
 
 ```yaml
 JIRA:
@@ -405,26 +386,39 @@ REPOSITORIES:
 CURRENT_MODEL_ROLE:
 NEXT_MODEL_ROLE:
 JIRA_CONTEXT_READY:
+REQUIREMENT_ANALYSIS_STATUS:
+BLOCKING_OPEN_QUESTIONS:
+TECHNICAL_QUALITY_REVIEW_STATUS:
+SOLUTION_DESIGN_STATUS:
+SOLUTION_APPROVED:
+SPEC_STATUS:
+SPEC_PLAN_APPROVED:
 RED_APPROVED:
 RED_LOCKED:
 RED_REOPEN_COUNT:
+GO_APPROVED:
 GREEN_STATUS:
 JUDGE_STATUS:
 JUDGE_FAIL_CLASS:
 RECOVERY_STATUS:
+RECOVERY_SOURCE:
+RECOVERY_CLASS:
+RECOVERY_RED_REOPEN_REQUIRED:
 QA_STATUS:
-COMMIT_MODE: # AUTO | MANUAL | OTHER
+COMMIT_MODE:
 COMMIT_PLAN_STATUS:
 COMMIT_STATUS:
-PR_STATUS: # NOT_REQUESTED | DESCRIPTION_READY | SKIPPED_BY_USER
+PR_STATUS:
+REMOTE_MR_STATUS:
+REMOTE_MR_IID:
+REMOTE_MR_URL:
+REMOTE_MR_MERGED_BY:
+REMOTE_MR_MERGED_AT:
+REMOTE_MR_MERGE_COMMIT:
 PENDING:
 ```
 
-Detalhes de Jira, critérios, classes, riscos, métricas e delivery ficam nos artefatos próprios.
-
----
-
-## 11. Orçamento
+## 13. Orçamento
 
 ```text
 MONTHLY_BUDGET_USD=40
@@ -432,36 +426,30 @@ FEATURE_TARGET_USD=8
 FEATURE_WARNING_USD=10
 ```
 
-Custo nunca autoriza reduzir qualidade.
+Economia vem de search-first, lazy loading, contexto compacto, model routing e gates mecânicos — nunca
+de omitir validação material.
 
----
+## 14. Cenários on-demand
 
-## 12. Cenários on-demand
+`skills/cenarios/` contém apenas **overlays/deltas** de profundidade e risco. Cenário não define pipeline
+próprio e não pode substituir estados/gates do `orquestrador.md`.
 
-```text
-skills/cenarios/historia-padrao.md
-skills/cenarios/local-conhecido.md
-skills/cenarios/bug-desenvolvimento.md
-skills/cenarios/bug-producao.md
-skills/cenarios/cross-repo.md
-```
-
-Cenários ajustam profundidade, não regras centrais de segurança.
-
----
-
-## 13. Loop operacional
+## 15. Loop operacional
 
 ```text
 referenciar orquestrador.md
 -> RESUME ou NEW
--> se NEW: FLOW_SELECTION
+-> FLOW_SELECTION se NEW
 -> JIRA_ACCESS
+-> FILTRAR HUMAN_ONLY PATHS
 -> LOAD CURRENT SKILL ONLY
 -> LOAD ALLOWED CONTEXT ONLY
+-> GITLAB_ACCESS se houver âncora GitLab
 -> EXECUTE
 -> CHECK GATE
--> SAVE STATE + NEXT_ACTION
--> HANDOFF quando necessário
+-> SAVE CURRENT_STATE + NEXT_ACTION
+-> MODEL_SWITCH no mesmo chat quando o papel mudar
+-> COMPACT_CONTEXT somente quando útil
+-> FRESH_CONTEXT somente quando explicitamente necessário
 -> NEXT
 ```

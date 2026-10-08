@@ -1,12 +1,15 @@
 # Plano de Implementação — <JIRA-ID>
 
 ## Pré-condições
+- `SOLUTION_APPROVED=true`
+- `SPEC_STATUS=APPROVED`
+- `BLOCKING_OPEN_QUESTIONS=0`
 
 ## Ordem de alteração
 
-| PLAN | Resultado observável | Depende de | ACs | DDs | Risco |
-|---|---|---|---|---|---|
-| PLAN-1 | | | | | LOW/MEDIUM/HIGH |
+| PLAN | Resultado observável | Depende de | Requisitos | ACs | DDs | Risco |
+|---|---|---|---|---|---|---|
+| PLAN-1 | | | | | | LOW/MEDIUM/HIGH |
 
 ## Repositórios e componentes
 
@@ -19,6 +22,7 @@
 ### PLAN-1 — <resultado>
 
 - `DEPENDS_ON`:
+- `REQUIREMENT_LINKS`:
 - `AC_LINKS`:
 - `DESIGN_DECISIONS`:
 - `FILES_CONFIRMED`:
@@ -43,7 +47,13 @@
 - mapping/serialização (se aplicável):
 - regressões adjacentes:
 
-> Marcar explicitamente o que for `NOT_APPLICABLE`; não inventar cenários sem relação com a história.
+> Marcar explicitamente `NOT_APPLICABLE`; não inventar cenário sem origem em requisito, AC, contrato ou risco.
+
+## Evidências não unitárias planejadas
+
+| AC | Evidência | Fase responsável | Justificativa |
+|---|---|---|---|
+| | INTEGRATION / STATIC / QA / EXTERNAL | | |
 
 ## QA planejado
 
@@ -53,8 +63,8 @@
 
 ## Matriz de rastreabilidade e impacto
 
-| AC/Jira | DD | PLAN | Arquivo/componente | Teste/evidência |
-|---|---|---|---|---|
-| | | | | |
+| R/Jira | AC | DD | PLAN | Arquivo/componente | Teste/evidência |
+|---|---|---|---|---|---|
+| | | | | | |
 
 ## Definition of Done técnico
